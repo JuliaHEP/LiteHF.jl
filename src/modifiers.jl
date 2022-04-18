@@ -2,8 +2,12 @@ abstract type AbstractModifier end
 
 struct Histosys{T<:AbstractInterp} <: AbstractModifier
     interp::T
+    function Histosys(interp::T) where T
+        @assert T <: Union{InterpCode0, InterpCode4}
+        new{T}(interp)
+    end
 end
-Histosys(up, down) = Histosys(InterpCode0(up, down))
+Histosys(up, down) = Histosys(InterpCode4(up, down))
 
 struct Normsys{T<:AbstractInterp} <: AbstractModifier
     interp::T
