@@ -41,5 +41,5 @@ end
 const mymodel = binned_b(v_data);
 
 ###### Inference
-# chain_map = optimize(mymodel, MAP())
-# display(chain_map)
+chain_map = optimize(mymodel, MAP())
+display(chain_map)
