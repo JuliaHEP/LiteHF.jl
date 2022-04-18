@@ -19,7 +19,7 @@ const sigexp = ExpCounts(v_sig, sigmodis);
 
 ###### Expected counts as a function of μ and θs
 function expected_bincounts2(μ, θs)
-    sigexp(μ) + bkgexp(θs...)
+    sigexp(μ) + bkgexp(θs)
 end
 
 ###### Turing.jl models
@@ -41,5 +41,5 @@ end
 const mymodel = binned_b(v_data);
 
 ###### Inference
-chain_map = optimize(mymodel, MAP())
-display(chain_map)
+# chain_map = optimize(mymodel, MAP())
+# display(chain_map)

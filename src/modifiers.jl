@@ -1,3 +1,5 @@
+using Unrolled
+
 abstract type AbstractModifier end
 
 struct Histosys{T<:AbstractInterp} <: AbstractModifier
@@ -23,25 +25,35 @@ struct Normfactor <: AbstractModifier # is unconstrained
     Normfactor() = new(identity)
 end
 
-struct ExpCounts{T<:Number, M}
-    nominal::Vector{T}
+struct ExpCounts{T, M}
+    nominal::T
     modifiers::M
 end
 
-function (E::ExpCounts)(αs...)
-    @assert length(αs) == length(E.modifiers)
-    res = E.nominal
-    multi = 1.0
+ExpCounts(nominal, modifiers::AbstractVector) = ExpCounts(nominal, tuple(modifiers...))
 
-    for (m, α) in zip(E.modifiers, αs)
-        if m isa Histosys
-        # additive
-            res += m.interp(E.nominal, α)
+@unroll function _expkernel(modifiers, nominal, αs)
+    additive = float(nominal)
+    factor = 1.0
+    @unroll for i in 1:length(modifiers)
+        @inbounds modifier = modifiers[i]
+        @inbounds α = αs[i]
+        if modifier isa Histosys
+            # additive
+            additive += modifier.interp(nominal, α)
         else
-        # multiplicative
-            multi *= m.interp(α)
+            # multiplicative
+            factor *= modifier.interp(α)
         end
     end
+    return (additive, factor)
+end
 
-    return multi * res
+function (E::ExpCounts)(αs)
+    (; modifiers, nominal) = E
+    @assert length(αs) == length(modifiers)
+
+    res = prod(_expkernel(modifiers, nominal, αs))
+
+    return res
 end
