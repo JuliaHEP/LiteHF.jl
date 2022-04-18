@@ -5,13 +5,13 @@ const v_sig = [2,3,4,5] # signal
 const v_bg = [30,19,9,4] # BKG
 const variations = [1,2,3,3]
 
-const bkgmodis =[
-                 Histosys(v_bg, v_bg .+ variations, v_bg .- variations),
-                 Normsys(v_bg, 1.1, 0.9)
-                ]
+const bkgmodis =(
+                 Histosys(v_bg .+ variations, v_bg .- variations),
+                 Normsys(1.1, 0.9)
+                )
 const bkgexp = ExpCounts(v_bg, bkgmodis)
 
-const sigmodis = [Normfactor()];
+const sigmodis = (Normfactor(), );
 const sigexp = ExpCounts(v_sig, sigmodis);
 
 function expected_bincounts2(μ, θs)

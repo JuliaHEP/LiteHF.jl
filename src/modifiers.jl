@@ -3,29 +3,25 @@ abstract type AbstractModifier end
 struct Histosys{T<:AbstractInterp} <: AbstractModifier
     interp::T
 end
-Histosys(nominal, up, down) = Histosys(InterpCode0(nominal, up, down))
+Histosys(up, down) = Histosys(InterpCode0(up, down))
 
 struct Normsys{T<:AbstractInterp} <: AbstractModifier
     interp::T
 end
 
-Normsys(nominal, up::Number, down::Number) = Normsys(InterpCode1(nominal, up, down))
+Normsys(up::Number, down::Number) = Normsys(InterpCode1(up, down))
 function Normsys(nominal, ups, downs) 
-    @assert length(nominal) == length(ups) == length(downs)
-    f_up = first(ups) / first(nominal)
-    f_down = first(downs) / first(nominal)
     Normsys(InterpCode1(nominal, f_up, f_down))
 end
-
 
 struct Normfactor <: AbstractModifier # is unconstrained
     interp::typeof(identity)
     Normfactor() = new(identity)
 end
 
-struct ExpCounts{T<:Number}
+struct ExpCounts{T<:Number, M}
     nominal::Vector{T}
-    modifiers::Vector{<:AbstractModifier}
+    modifiers::M
 end
 
 function (E::ExpCounts)(αs...)
@@ -36,7 +32,7 @@ function (E::ExpCounts)(αs...)
     for (m, α) in zip(E.modifiers, αs)
         if m isa Histosys
         # additive
-            res = res .+ m.interp(α)
+            res += m.interp(E.nominal, α)
         else
         # multiplicative
             multi *= m.interp(α)

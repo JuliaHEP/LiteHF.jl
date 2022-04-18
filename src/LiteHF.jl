@@ -1,7 +1,7 @@
 module LiteHF
 
 # interpolations
-export InterpCode0, InterpCode1
+export InterpCode0, InterpCode1, InterpCode2, InterpCode4
 
 # modifiers
 export Normsys, Histosys, Normfactor
