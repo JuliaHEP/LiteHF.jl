@@ -1,4 +1,5 @@
-# LiteHF
+# LiteHF.jl [WIP]
+
 ## Example
 ```julia
 using Turing, LiteHF, Optim
