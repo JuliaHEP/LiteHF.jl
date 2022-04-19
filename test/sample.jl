@@ -1,5 +1,5 @@
 using Turing, LiteHF, Optim
-
+Turing.setadbackend(:reversediff)
 ###### Dummy data ######
 const v_data = [34,22,13,11] # observed data
 const v_sig = [2,3,4,5] # signal
@@ -29,11 +29,6 @@ end
 
     expected = expected_bincounts2(μ, θs)
 
-    if any(<(0), expected)
-        Turing.@addlogprob! -Inf
-        return
-    end
-
     @. bincounts ~ Poisson(expected)
 end
 
@@ -41,5 +36,5 @@ end
 const mymodel = binned_b(v_data);
 
 ###### Inference
-chain_map = optimize(mymodel, MAP())
+chain_map = optimize(mymodel, MAP(), [1,1,1])
 display(chain_map)

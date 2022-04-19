@@ -63,7 +63,6 @@ end
 
 function (E::ExpCounts)(αs)
     (; modifiers, nominal) = E
-    @assert length(αs) == length(modifiers)
 
     res = prod(_expkernel(modifiers, nominal, αs))
 
