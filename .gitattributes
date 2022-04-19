@@ -1,0 +1,2 @@
+# for tests
+test/*.py linguist-detectable=false
