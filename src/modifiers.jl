@@ -4,7 +4,7 @@ abstract type AbstractModifier end
 
 """
     Histosys is defined by two vectors represending bin counts
-    in `hi_` and `lo_data`
+    in `hi_data` and `lo_data`
 """
 struct Histosys{T<:AbstractInterp} <: AbstractModifier
     interp::T
@@ -27,12 +27,13 @@ function Normsys(nominal, ups, downs)
     Normsys(InterpCode1(nominal, f_up, f_down))
 end
 
+twoidentity(I0, α) = α
 """
     Normfactor is unconstrained, so `interp` is always `identity()`
 """
 struct Normfactor <: AbstractModifier # is unconstrained
-    interp::typeof(identity)
-    Normfactor() = new(identity)
+    interp::typeof(twoidentity)
+    Normfactor() = new(twoidentity)
 end
 
 struct ExpCounts{T, M}
@@ -55,7 +56,7 @@ nmodifiers(E::ExpCounts) = length(E.modifiers)
             additive += modifier.interp(nominal, α)
         else
             # multiplicative
-            factor *= modifier.interp(α)
+            factor *= modifier.interp(nominal, α)
         end
     end
     return (additive, factor)

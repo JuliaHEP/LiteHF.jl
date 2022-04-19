@@ -25,7 +25,7 @@ function InterpCode1(I0, I_up::T, I_down::T) where {T<:AbstractVector}
     InterpCode1(f_up, f_down)
 end
 
-function (i::InterpCode1)(α)
+function (i::InterpCode1)(I0, α)
     if α >= 0
         (i.f_up)^α
     else
@@ -72,7 +72,7 @@ function (i::InterpCode4)(I0, α)
     (; I_up, I_down, inver, α0) = i
     delta_up = @. I_up / I0
     delta_down = @. I_down / I0
-    if α >= α0
+    mult = if α >= α0
         @. (delta_up) ^ α
     elseif α <= -α0
         @. (delta_down) ^ (-α)
@@ -87,11 +87,10 @@ function (i::InterpCode4)(I0, α)
              log(delta_up)^2 * delta_up_alpha0,
              log(delta_down)^2 * delta_down_alpha0,
             ]
-        coefficients = [
-                        sum(A_i * b_j for (A_i, b_j) in zip(A_row, b)) for A_row in eachrow(inver)
-                       ]
+        coefficients = inver * b
         1 .+ sum(coefficients[i] * α^i for i=1:6)
     end
+    @. I0 * (mult - 1)
 end
 
 function _interp4_inverse(α0)

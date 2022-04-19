@@ -1,5 +1,4 @@
 using Turing, LiteHF, Optim
-Turing.setadbackend(:reversediff)
 ###### Dummy data ######
 const v_data = [34,22,13,11] # observed data
 const v_sig = [2,3,4,5] # signal
