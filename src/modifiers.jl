@@ -20,20 +20,42 @@ struct Normsys{T<:AbstractInterp} <: AbstractModifier
 end
 
 """
-    Normfactor is defined by two multiplicative scalars
+    Normsys is defined by two multiplicative scalars
 """
 Normsys(up::Number, down::Number) = Normsys(InterpCode1(up, down))
-function Normsys(nominal, ups, downs) 
-    Normsys(InterpCode1(nominal, f_up, f_down))
-end
+Normsys(nominal, ups, downs) = Normsys(InterpCode1(nominal, ups, downs))
 
-twoidentity(I0, α) = α
+twoidentity(_, α) = α
 """
-    Normfactor is unconstrained, so `interp` is always `identity()`
+    Normfactor is unconstrained, so `interp` is just identity.
 """
 struct Normfactor <: AbstractModifier # is unconstrained
     interp::typeof(twoidentity)
     Normfactor() = new(twoidentity)
+end
+
+"""
+    Staterror doesn't need interpolation
+"""
+struct Staterror <: AbstractModifier
+    interp::typeof(twoidentity)
+    Stateerror() = new(twoidentity)
+end
+
+"""
+    Luminosity doesn't need interpolation
+"""
+struct Lumi <: AbstractModifier
+    interp::typeof(twoidentity)
+    Lumi() = new(twoidentity)
+end
+
+"""
+    Shapesys doesn't need interpolation
+"""
+struct Shapesys<: AbstractModifier
+    interp::typeof(twoidentity)
+    Shapesys() = new(twoidentity)
 end
 
 struct ExpCounts{T, M}
@@ -47,7 +69,7 @@ nmodifiers(E::ExpCounts) = length(E.modifiers)
 
 @unroll function _expkernel(modifiers, nominal, αs)
     additive = float(nominal)
-    factor = 1.0
+    factor = ones(additive)
     @unroll for i in 1:length(modifiers)
         @inbounds modifier = modifiers[i]
         @inbounds α = αs[i]
@@ -56,18 +78,17 @@ nmodifiers(E::ExpCounts) = length(E.modifiers)
             additive += modifier.interp(nominal, α)
         else
             # multiplicative
-            factor *= modifier.interp(nominal, α)
+            factor = factor .* modifier.interp(nominal, α)
         end
     end
-    return (additive, factor)
+    return factor .* additive
 end
 
 function (E::ExpCounts)(αs)
     (; modifiers, nominal) = E
 
-    res = prod(_expkernel(modifiers, nominal, αs))
-
-    return res
+    @assert length(modifiers) == length(αs)
+    return _expkernel(modifiers, nominal, αs)
 end
 
 for T in (Normsys, Normfactor, Histosys)

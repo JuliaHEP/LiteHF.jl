@@ -4,6 +4,9 @@ const _modifier_dict = Dict(
                             "normfactor" => Normfactor,
                             "histosys" => Histosys,
                             "normsys" => Normsys,
+                            "shapesys" => Shapesys,
+                            "staterror" => Stateerror,
+                            "lumi" => Lumi,
                            )
 
 
@@ -31,7 +34,7 @@ function build_modifier(jobj, modifier_type::Type{T}) where T
         T(hilo_data(jobj)...)
     elseif T == Normsys
         T(hilo_factor(jobj)...)
-    elseif T == Normfactor
+    else
         T()
     end
 end
