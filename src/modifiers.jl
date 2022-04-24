@@ -39,7 +39,7 @@ end
 """
 struct Staterror <: AbstractModifier
     interp::typeof(twoidentity)
-    Stateerror() = new(twoidentity)
+    Staterror() = new(twoidentity)
 end
 
 """
@@ -60,16 +60,17 @@ end
 
 struct ExpCounts{T, M}
     nominal::T
+    modifier_names::Vector{String}
     modifiers::M
 end
 
-ExpCounts(nominal, modifiers::AbstractVector) = ExpCounts(nominal, tuple(modifiers...))
+ExpCounts(nominal, names::Vector{String}, modifiers::AbstractVector) = ExpCounts(nominal, names, tuple(modifiers...))
 
-nmodifiers(E::ExpCounts) = length(E.modifiers)
+nmodifiers(E::ExpCounts) = length(E.modifier_names)
 
 @unroll function _expkernel(modifiers, nominal, αs)
     additive = float(nominal)
-    factor = ones(additive)
+    factor = ones(length(additive))
     @unroll for i in 1:length(modifiers)
         @inbounds modifier = modifiers[i]
         @inbounds α = αs[i]
@@ -84,14 +85,18 @@ nmodifiers(E::ExpCounts) = length(E.modifiers)
     return factor .* additive
 end
 
-function (E::ExpCounts)(αs)
-    (; modifiers, nominal) = E
+_name_val_match(αs, names) = [αs[k] for k in names]
+_name_val_match(αs::NamedTuple, names) = [αs[Symbol(k)] for k in names]
 
-    @assert length(modifiers) == length(αs)
-    return _expkernel(modifiers, nominal, αs)
+function (E::ExpCounts)(αs)
+    (; modifier_names, modifiers, nominal) = E
+
+    @assert length(modifier_names) == length(αs)
+    vals = _name_val_match(αs, modifier_names)
+    return _expkernel(modifiers, nominal, vals)
 end
 
-for T in (Normsys, Normfactor, Histosys)
+for T in (Normsys, Normfactor, Histosys, Staterror, Lumi)
     @eval function Base.show(io::IO, E::$T)
         interp = Base.typename(typeof(E.interp)).name
         print(io, $T, "{$interp}")
@@ -100,7 +105,10 @@ end
 
 function Base.show(io::IO, E::ExpCounts)
     modifiers = E.modifiers
-    elip = length(modifiers) > 5 ? "..." : ""
+    elip = length(modifiers) > 5 ? "...\n" : ""
     println(io, "ExpCounts with $(length(modifiers)) modifiers:")
-    println(io, join(first(modifiers, 5), ", "), elip)
+    for (n, m) in zip(E.modifier_names, modifiers)
+        println(io, n=>m)
+    end
+    print(elip)
 end

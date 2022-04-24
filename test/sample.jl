@@ -10,15 +10,15 @@ const bkgmodis =[
                  Histosys(v_bg .+ variations, v_bg .- variations),
                  Normsys(1.1, 0.9)
                 ]
-const bkgexp = ExpCounts(v_bg, bkgmodis)
+const bkgexp = ExpCounts(v_bg, ["theta1", "theta2"], bkgmodis)
 
 const sigmodis = [Normfactor()];
-const sigexp = ExpCounts(v_sig, sigmodis);
+const sigexp = ExpCounts(v_sig, ["mu"], sigmodis);
 
 
 ###### Expected counts as a function of μ and θs
 function expected_bincounts2(μ, θs)
-    sigexp(μ) + bkgexp(θs)
+    sigexp((mu = μ, )) + bkgexp((theta1=θs[1], theta2=θs[2]))
 end
 
 ###### Turing.jl models

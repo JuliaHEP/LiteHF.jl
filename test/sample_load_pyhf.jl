@@ -7,7 +7,7 @@ const sigexp = model["mychannel"]["signal_MC"]
 
 ###### Expected counts as a function of μ and θs
 function expected_bincounts2(μ, θs)
-    sigexp(μ) + bkgexp(θs[1:2])# + bkgexp2(θs[end])
+    sigexp((mu = μ, )) + bkgexp((theta=θs[1], SF_theta=θs[2])) # + bkgexp2(θs[end])
 end
 
 ###### Turing.jl models

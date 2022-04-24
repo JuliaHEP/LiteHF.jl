@@ -5,7 +5,7 @@ const _modifier_dict = Dict(
                             "histosys" => Histosys,
                             "normsys" => Normsys,
                             "shapesys" => Shapesys,
-                            "staterror" => Stateerror,
+                            "staterror" => Staterror,
                             "lumi" => Lumi,
                            )
 
@@ -21,7 +21,10 @@ end
     build_modifier(rawjdict[:channels][1][:samples][2][:modifiers][1]) =>
     <:AbstractModifier
 """
-function build_modifier(jobj)
+function build_modifier!(jobj, names)
+    mod_name = jobj[:name]
+    push!(names, mod_name)
+    # use existing modifier if they're the same by name
     build_modifier(jobj[:data], _modifier_dict[jobj[:type]])
 end
 
@@ -43,8 +46,9 @@ end
     build_sample(rawjdict[:channels][1][:samples][2]) =>
     Pair{String, ExpCounts}
 """
-function build_sample(jobj)
-    jobj[:name] => ExpCounts(jobj[:data], build_modifier.(jobj[:modifiers]))
+function build_sample(jobj, names=String[])
+    modifiers = build_modifier!.(jobj[:modifiers], Ref(names))
+    jobj[:name] => ExpCounts(jobj[:data], names, modifiers)
 end
 
 """

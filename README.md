@@ -15,15 +15,15 @@ const bkgmodis =[
                  Histosys(v_bg .+ variations, v_bg .- variations),
                  Normsys(1.1, 0.9)
                 ]
-const bkgexp = ExpCounts(v_bg, bkgmodis)
+const bkgexp = ExpCounts(v_bg, ["theta1", "theta2"], bkgmodis)
 
 const sigmodis = [Normfactor()];
-const sigexp = ExpCounts(v_sig, sigmodis);
+const sigexp = ExpCounts(v_sig, ["mu"], sigmodis);
 
 
 ###### Expected counts as a function of μ and θs
 function expected_bincounts2(μ, θs)
-    sigexp(μ) + bkgexp(θs...)
+    sigexp((mu = μ, )) + bkgexp((theta1=θs[1], theta2=θs[2]))
 end
 
 ###### Turing.jl models
@@ -59,19 +59,21 @@ using Turing, LiteHF, Optim
 
 model = load_pyhfjson("./sample.json");
 const bkgexp = model["mychannel"]["bkg_MC"]
+# const bkgexp2 = model["mychannel"]["bkg_MC2"]
 const sigexp = model["mychannel"]["signal_MC"]
 
 ###### Expected counts as a function of μ and θs
 function expected_bincounts2(μ, θs)
-    sigexp(μ) + bkgexp(θs)
+    sigexp((mu = μ, )) + bkgexp((theta=θs[1], SF_theta=θs[2])) # + bkgexp2(θs[end])
 end
 
 ###### Turing.jl models
 @model function binned_b(bincounts)
     μ ~ Uniform(0, 6)
-    θs ~ filldist(Normal(), 2)
+    θs ~ filldist(Normal(), 3)
 
     expected = expected_bincounts2(μ, θs)
+
     @. bincounts ~ Poisson(expected)
 end
 
@@ -80,6 +82,6 @@ const v_data = [34,22,13,11] # observed data
 const mymodel = binned_b(v_data);
 
 ###### Inference
-chain_map = optimize(mymodel, MAP(), [1,1,1])
+chain_map = optimize(mymodel, MAP(), [1,1,1,1])
 display(chain_map)
 ```
