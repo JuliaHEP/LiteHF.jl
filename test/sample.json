@@ -20,9 +20,6 @@
                                 "hi_data": [31,21,12,7], 
                                 "lo_data": [29,17,6,1]
                             }
-                        },
-                        {   "name": "SF_theta", "type": "normsys", 
-                            "data": {"hi": 1.1, "lo": 0.9}
                         }
                     ]
                 }

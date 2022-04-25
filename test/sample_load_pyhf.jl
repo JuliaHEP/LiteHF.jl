@@ -1,29 +1,9 @@
-using Turing, LiteHF, Optim
+using Turing, Optim, LiteHF
 
-model = load_pyhfjson("./sample.json");
-const bkgexp = model["mychannel"]["bkg_MC"]
-# const bkgexp2 = model["mychannel"]["bkg_MC2"]
-const sigexp = model["mychannel"]["signal_MC"]
+pyhfmodel = load_pyhfjson("./sample.json");
 
-###### Expected counts as a function of μ and θs
-function expected_bincounts2(μ, θs)
-    sigexp((mu = μ, )) + bkgexp((theta=θs[1], SF_theta=θs[2])) # + bkgexp2(θs[end])
-end
+modifier_names, model = LiteHF.genmodel(pyhfmodel);
 
-###### Turing.jl models
-@model function binned_b(bincounts)
-    μ ~ Uniform(0, 6)
-    θs ~ filldist(Normal(), 3)
+observed = [34,22,13,11];
 
-    expected = expected_bincounts2(μ, θs)
-
-    @. bincounts ~ Poisson(expected)
-end
-
-###### Feed observed data to model to construct a posterior/likelihood object
-const v_data = [34,22,13,11] # observed data
-const mymodel = binned_b(v_data);
-
-###### Inference
-chain_map = optimize(mymodel, MAP(), [1,1,1,1])
-display(chain_map)
+optimize(model(observed), MAP(), [1,1])

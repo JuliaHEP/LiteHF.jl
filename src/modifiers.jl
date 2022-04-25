@@ -1,6 +1,7 @@
 using Unrolled
 
 abstract type AbstractModifier end
+function _prior end
 
 """
     Histosys is defined by two vectors represending bin counts
@@ -13,11 +14,13 @@ struct Histosys{T<:AbstractInterp} <: AbstractModifier
         new{T}(interp)
     end
 end
-Histosys(up, down) = Histosys(InterpCode4(up, down))
+Histosys(up, down) = Histosys(InterpCode0(up, down))
+_prior(::Histosys) = Normal()
 
 struct Normsys{T<:AbstractInterp} <: AbstractModifier
     interp::T
 end
+_prior(::Normsys) = Normal()
 
 """
     Normsys is defined by two multiplicative scalars
@@ -33,6 +36,7 @@ struct Normfactor <: AbstractModifier # is unconstrained
     interp::typeof(twoidentity)
     Normfactor() = new(twoidentity)
 end
+_prior(::Normfactor) = Uniform(-10, 10)
 
 """
     Staterror doesn't need interpolation
@@ -66,7 +70,7 @@ end
 
 ExpCounts(nominal, names::Vector{String}, modifiers::AbstractVector) = ExpCounts(nominal, names, tuple(modifiers...))
 
-nmodifiers(E::ExpCounts) = length(E.modifier_names)
+nmodifiers(E::ExpCounts) = length(E.modifiers)
 
 @unroll function _expkernel(modifiers, nominal, αs)
     additive = float(nominal)
@@ -85,15 +89,11 @@ nmodifiers(E::ExpCounts) = length(E.modifier_names)
     return factor .* additive
 end
 
-_name_val_match(αs, names) = [αs[k] for k in names]
-_name_val_match(αs::NamedTuple, names) = [αs[Symbol(k)] for k in names]
-
 function (E::ExpCounts)(αs)
     (; modifier_names, modifiers, nominal) = E
 
     @assert length(modifier_names) == length(αs)
-    vals = _name_val_match(αs, modifier_names)
-    return _expkernel(modifiers, nominal, vals)
+    return _expkernel(modifiers, nominal, αs)
 end
 
 for T in (Normsys, Normfactor, Histosys, Staterror, Lumi)

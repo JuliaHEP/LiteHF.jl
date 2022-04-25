@@ -1,5 +1,7 @@
 module LiteHF
 
+using Distributions
+
 # interpolations
 export InterpCode0, InterpCode1, InterpCode2, InterpCode4
 
@@ -15,5 +17,6 @@ export ExpCounts
 include("./interpolations.jl")
 include("./modifiers.jl")
 include("./pyhfparser.jl")
+include("./modelgen.jl")
 
 end

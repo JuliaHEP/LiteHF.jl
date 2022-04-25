@@ -1,6 +1,30 @@
 # LiteHF.jl [WIP]
 
-## Example
+## Load `pyhf` JSON:
+```julia
+julia> using Turing, Optim, LiteHF
+
+julia> pyhfmodel = load_pyhfjson("./sample.json");
+
+julia> modifier_names, model = LiteHF.genmodel(pyhfmodel);
+
+julia> observed = [34,22,13,11];
+
+julia> optimize(model(observed), MAP(), [1,1])
+ModeResult with maximized lp of -13.51
+2-element Named Vector{Float64}
+A               │ 
+────────────────┼───────────
+Symbol("αs[1]") │    1.30648
+Symbol("αs[2]") │ -0.0605151
+
+julia> modifier_names
+2-element Vector{String}:
+ "mu"
+ "theta"
+```
+
+## Manual Example
 ```julia
 using Turing, LiteHF, Optim
 
@@ -53,35 +77,3 @@ Symbol("θs[1]") │   0.032979
 Symbol("θs[2]") │ -0.0352236⏎  
 ```
 
-## Load `pyhf` JSON:
-```julia
-using Turing, LiteHF, Optim
-
-model = load_pyhfjson("./sample.json");
-const bkgexp = model["mychannel"]["bkg_MC"]
-# const bkgexp2 = model["mychannel"]["bkg_MC2"]
-const sigexp = model["mychannel"]["signal_MC"]
-
-###### Expected counts as a function of μ and θs
-function expected_bincounts2(μ, θs)
-    sigexp((mu = μ, )) + bkgexp((theta=θs[1], SF_theta=θs[2])) # + bkgexp2(θs[end])
-end
-
-###### Turing.jl models
-@model function binned_b(bincounts)
-    μ ~ Uniform(0, 6)
-    θs ~ filldist(Normal(), 3)
-
-    expected = expected_bincounts2(μ, θs)
-
-    @. bincounts ~ Poisson(expected)
-end
-
-###### Feed observed data to model to construct a posterior/likelihood object
-const v_data = [34,22,13,11] # observed data
-const mymodel = binned_b(v_data);
-
-###### Inference
-chain_map = optimize(mymodel, MAP(), [1,1,1,1])
-display(chain_map)
-```
