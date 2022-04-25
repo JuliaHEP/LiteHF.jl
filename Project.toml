@@ -10,6 +10,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Unrolled = "9602ed7d-8fef-5bc8-8597-8f21381861e8"
 
 [compat]
+DynamicPPL = "0.19"
 JSON3 = "1"
 StaticArrays = "1"
 Unrolled = "0.1"
