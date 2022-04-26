@@ -13,6 +13,7 @@ Unrolled = "9602ed7d-8fef-5bc8-8597-8f21381861e8"
 [compat]
 JSON3 = "1"
 StaticArrays = "1"
+Turing = "0.21"
 Unrolled = "0.1"
 julia = "1"
 
