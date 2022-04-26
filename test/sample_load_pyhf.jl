@@ -1,9 +1,15 @@
-using Turing, Optim, LiteHF
+using LiteHF, Optim
 
-pyhfmodel = load_pyhfjson("./sample.json");
+pydict = load_pyhfjson("./test/sample.json");
 
-modifier_names, model = LiteHF.genmodel(pyhfmodel);
+expe, pri, pri_names = build_pyhf(pydict);
 
-observed = [34,22,13,11];
+observed_data = [34,22,13,11];
 
-optimize(model(observed), MAP(), [1,1])
+# the 3-argument includes the prior ("constraint") term in likelihood
+NLL(αs) = -loglikelihoodof(expe, pri, observed_data)(αs)
+
+optimize(NLL, [1.0, 1.0]).minimizer
+# 2-element Vector{Float64}:
+#   1.3064374172547253
+#  -0.060413406717672286

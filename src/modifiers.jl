@@ -36,7 +36,7 @@ struct Normfactor <: AbstractModifier # is unconstrained
     interp::typeof(twoidentity)
     Normfactor() = new(twoidentity)
 end
-_prior(::Normfactor) = Uniform(-10, 10)
+_prior(::Normfactor) = Uniform(0, 10)
 
 """
     Staterror doesn't need interpolation

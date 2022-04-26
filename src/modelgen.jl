@@ -17,17 +17,18 @@ function _idxspartition(counts)
 end
 
 """
-    build_pyhf_spec(load_pyhfjson(path)) 
-        -> forward_model::Function, priors::NamedTupleDist, priornames::Tuple{Symbol}
+    build_pyhf(load_pyhfjson(path)) 
+        -> expected::Function, priors::NamedTupleDist, priornames::Tuple{Symbol}
 
-    the `foward_model(αs)` is a function that takes vector or tuple of length `N`, where `N` is also the
+    the `expected(αs)` is a function that takes vector or tuple of length `N`, where `N` is also the
     length of `priors` and `priornames`. In other words, the three objects returned
     are aligned.
 
-    The output of `forward_model()` is always a `Distributions.Product{}` of Poissons(each bin).
+    The output of `forward_model()` is always a vector of length `N`, represending the expected
+    bin counts when all parameters (`αs`) taking a set of specific values.
 
 """
-function build_pyhf_spec(pyhfmodel)
+function build_pyhf(pyhfmodel)
     #### all_* are before de-duplicating
     all_expcounts = Tuple(
                      sample[2]
@@ -45,26 +46,55 @@ function build_pyhf_spec(pyhfmodel)
 
     counts = nmodifiers.(all_expcounts)
     v_idxs = _idxspartition(counts)
+
     priornames = Tuple(Symbol.(unique_names))
     priors = NamedTupleDist(NamedTuple{priornames}(_prior.(unique_modifiers)))
-
-    forward_model = let Es = all_expcounts, Vs = v_idxs
-        αs -> product_distribution(Poisson.(internal_expected(Es, Vs, αs)))
+    expected = let Es = all_expcounts, Vs = v_idxs
+        αs -> internal_expected(Es, Vs, αs)
     end
 
-    return forward_model, priors, priornames
+    return expected, priors, priornames
+end
 
-#     @model function refmodel(bincounts)
-#         αs ~ arraydist(priors)
+"""
+    loglikelihoodof(expected, obs)
+    Return a callable Function that would calculate the log likelihood
 
-#         exp = internal_expected(all_expcounts, v_idxs, αs)
+    !!!Note
+    The "constraint" terms that come from prior is NOT included here.
+"""
+function loglikelihoodof(expected, obs)
+    f(x, o) = logpdf(Poisson(x), o)
+    L = let data = obs
+        αs -> begin 
+            expe = expected(αs)
+            any(<(0), expe) && return -Inf
+            measurement = mapreduce(f, +, expe, obs)
 
-#         if any(<(0), exp)
-#             Turing.@addlogprob! -Inf
-#             return
-#         end
-#         @. bincounts ~ Poisson(exp)
-#     end
+            return measurement
+        end
+    end
+    return L
+end
 
-#     return unique_names, refmodel
+"""
+    loglikelihoodof(expected, obs, priors)
+    Return a callable Function that would calculate the log likelihood
+
+    !!!Note
+    The "constraint" terms that come from prior IS included here.
+"""
+function loglikelihoodof(expected, obs, priors)
+    f(x, o) = logpdf(Poisson(x), o)
+    L = let data = obs, pris = values(priors)
+        αs -> begin 
+            expe = expected(αs)
+            any(<(0), expe) && return -Inf
+            measurement = mapreduce(f, +, expe, obs)
+            constraint = mapreduce(logpdf, +, pris, αs)
+
+            return measurement + constraint
+        end
+    end
+    return L
 end
