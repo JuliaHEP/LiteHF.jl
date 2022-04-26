@@ -7,8 +7,8 @@ version = "0.1.0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 Unrolled = "9602ed7d-8fef-5bc8-8597-8f21381861e8"
+ValueShapes = "136a8f8c-c49b-4edb-8b98-f3d64d48be8f"
 
 [compat]
 JSON3 = "1"
