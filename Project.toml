@@ -11,6 +11,7 @@ Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 Unrolled = "9602ed7d-8fef-5bc8-8597-8f21381861e8"
 
 [compat]
+Distributions = "0.25"
 JSON3 = "1"
 StaticArrays = "1"
 Unrolled = "0.1"
