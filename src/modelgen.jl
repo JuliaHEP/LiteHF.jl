@@ -2,18 +2,8 @@ using ValueShapes
 
 @generated function internal_expected(Es, Vs, αs)
     @assert Es <: Tuple
-    expand(i) = i == 1 ? :(Es[1](αs[Vs[1]])) : :(+(Es[$i](αs[Vs[$i]]), $(expand(i-1))))
+    @views expand(i) = i == 1 ? :(Es[1](αs[Vs[1]])) : :(+(Es[$i](αs[Vs[$i]]), $(expand(i-1))))
     return expand(length(Es.parameters))
-end
-
-function _idxspartition(counts)
-    temp = UnitRange[]
-    C = 1
-    for N in counts
-        push!(temp, C:C+N-1)
-        C+=N
-    end
-    Tuple(temp)
 end
 
 """
@@ -34,36 +24,42 @@ function build_pyhf(pyhfmodel)
                      sample[2]
                      for channel in pyhfmodel for sample in channel[2]
                     )
-    all_names = reduce(vcat, 
-                       E.modifier_names for E in all_expcounts
-                      )
+    all_v_names = [E.modifier_names for E in all_expcounts]
+    all_names = reduce(vcat, all_v_names)
     all_modifiers = mapreduce(collect, vcat, 
                               E.modifiers for E in all_expcounts
                              )
     lookup = Dict(all_names .=> all_modifiers)
     unique_names = unique(all_names)
-    unique_modifiers = [lookup[k] for k in unique_names]
-
-    counts = nmodifiers.(all_expcounts)
-    v_idxs = _idxspartition(counts)
-
+    input_modifiers = [lookup[k] for k in unique_names]
     priornames = Tuple(Symbol.(unique_names))
-    priors = NamedTupleDist(NamedTuple{priornames}(_prior.(unique_modifiers)))
-    expected = let Es = all_expcounts, Vs = v_idxs
+    priors = NamedTupleDist(NamedTuple{priornames}(_prior.(input_modifiers)))
+
+    # Special case: same name can appear multiple times with different modifier type
+    
+    # if masks[1] == [1,2,4] that means the first `ExpCounts(αs[[1,2,4]])`
+    masks = Tuple([findfirst(==(i), unique_names) for i in names] for names in all_v_names)
+    counts = nmodifiers.(all_expcounts)
+    # each mask should have enough parameter to feed the ExpCount
+    @assert all(length.(masks) .== counts)
+
+    expected = let Es = all_expcounts, Vs = masks
         αs -> internal_expected(Es, Vs, αs)
     end
+
+    # loglikelihood = pyhf_loglikelihoodof(expected, priors)
 
     return expected, priors, priornames
 end
 
 """
-    loglikelihoodof(expected, obs)
+    pyhf_loglikelihoodof(expected, obs)
     Return a callable Function that would calculate the log likelihood
 
     !!!Note
     The "constraint" terms that come from prior is NOT included here.
 """
-function loglikelihoodof(expected, obs)
+function pyhf_loglikelihoodof(expected, obs)
     f(x, o) = logpdf(Poisson(x), o)
     L = let data = obs
         αs -> begin 
@@ -78,13 +74,13 @@ function loglikelihoodof(expected, obs)
 end
 
 """
-    loglikelihoodof(expected, obs, priors)
+    pyhf_loglikelihoodof(expected, obs, priors)
     Return a callable Function that would calculate the log likelihood
 
     !!!Note
     The "constraint" terms that come from prior IS included here.
 """
-function loglikelihoodof(expected, obs, priors)
+function pyhf_loglikelihoodof(expected, obs, priors)
     f(x, o) = logpdf(Poisson(x), o)
     L = let data = obs, pris = values(priors)
         αs -> begin 

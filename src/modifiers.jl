@@ -38,21 +38,40 @@ struct Normfactor <: AbstractModifier # is unconstrained
 end
 _prior(::Normfactor) = Uniform(0, 10)
 
-"""
-    Staterror doesn't need interpolation
-"""
-struct Staterror <: AbstractModifier
-    interp::typeof(twoidentity)
-    Staterror() = new(twoidentity)
-end
+#FIXME: how does this work???
+# """
+#     Shapesys doesn't need interpolation, but it inflates to `N` input parameters instead
+#     of one, where `N` is number of bins affected.
+# """
+# struct Shapesys <: AbstractModifier
+#     σs::Float64
+#     interp::typeof(twoidentity)
+#     Staterror(data) = new(data, twoidentity)
+# end
+# _prior(S::Staterror) = Poisson(inv(S.σs^2))
 
 """
-    Luminosity doesn't need interpolation
+    Staterror doesn't need interpolation, but it inflates to `N` input parameters instead
+    of one, where `N` is number of bins affected.
+"""
+struct Staterror <: AbstractModifier
+    δ2::Float64
+    interp::typeof(twoidentity)
+    Staterror(data) = new(data, twoidentity)
+end
+_prior(S::Staterror) = Normal(1, sqrt(S.δ2))
+
+"""
+    Luminosity doesn't need interpolation, σ is provided at modifier construction time.
+    In `pyhf` JSON, this  information lives in the "Measurement" section, usually near the end of
+    the JSON file.
 """
 struct Lumi <: AbstractModifier
+    σ::Float64
     interp::typeof(twoidentity)
-    Lumi() = new(twoidentity)
+    Lumi(σ) = new(σ, twoidentity)
 end
+_prior(l::Lumi) = Normal(1, l.σ)
 
 """
     Shapesys doesn't need interpolation

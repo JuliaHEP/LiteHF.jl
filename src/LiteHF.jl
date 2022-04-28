@@ -2,13 +2,13 @@ module LiteHF
 
 using Distributions
 
-export loglikelihoodof
+export pyhf_loglikelihoodof
 
 # interpolations
-export InterpCode0, InterpCode1, InterpCode2, InterpCode4
+# export InterpCode0, InterpCode1, InterpCode2, InterpCode4
 
 # modifiers
-export Normsys, Histosys, Normfactor, nmodifiers
+export Normsys, Histosys, Normfactor, Lumi, Staterror, nmodifiers
 
 # pyhf json parsing
 export build_channel, build_sample, load_pyhfjson, build_pyhf

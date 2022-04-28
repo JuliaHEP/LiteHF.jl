@@ -21,22 +21,39 @@ end
     build_modifier(rawjdict[:channels][1][:samples][2][:modifiers][1]) =>
     <:AbstractModifier
 """
-function build_modifier!(jobj, names)
+function build_modifier!(jobj, names; misc)
+    mod = build_modifier(jobj, _modifier_dict[jobj[:type]]; misc)
     mod_name = jobj[:name]
-    push!(names, mod_name)
-    # use existing modifier if they're the same by name
-    build_modifier(jobj[:data], _modifier_dict[jobj[:type]])
+    if mod isa Vector
+        # for stuff like Staterror, which inflates to multiple `γ`
+        for i in eachindex(mod)
+            push!(names, string(mod_name, "_bin$i"))
+        end
+    else
+        push!(names, mod_name)
+    end
+    return mod
 end
 
 """
     build_modifier(...[:modifiers][1][:data], Type) =>
     <:AbstractModifier
 """
-function build_modifier(jobj, modifier_type::Type{T}) where T
+function build_modifier(modobj, modifier_type::Type{T}; misc) where T
     if T == Histosys
-        T(hilo_data(jobj)...)
+        T(hilo_data(modobj[:data])...)
     elseif T == Normsys
-        T(hilo_factor(jobj)...)
+        T(hilo_factor(modobj[:data])...)
+    elseif T == Staterror
+        T.(modobj[:data])
+    elseif T == Lumi
+        paras = misc[:measurements][1]["config"]["parameters"]
+        lumi_idx = findfirst(x->x["name"] == modobj[:name], paras)
+        σ = only(paras[lumi_idx]["sigmas"])
+        T(σ)
+    #FIXME: how does it work???
+    # elseif T == Shapesys
+    #     T.(dataobj)
     else
         T()
     end
@@ -46,8 +63,9 @@ end
     build_sample(rawjdict[:channels][1][:samples][2]) =>
     Pair{String, ExpCounts}
 """
-function build_sample(jobj, names=String[])
-    modifiers = build_modifier!.(jobj[:modifiers], Ref(names))
+function build_sample(jobj, names=String[]; misc)
+    modifiers = build_modifier!.(jobj[:modifiers], Ref(names); misc)
+    modifiers = any(x->x <: Vector, typeof.(modifiers)) ? reduce(vcat, modifiers) : modifiers #flatten it
     jobj[:name] => ExpCounts(jobj[:data], names, modifiers)
 end
 
@@ -55,8 +73,8 @@ end
     build_channel(rawjdict[:channels][1][:samples][2]) =>
     Dict{String, ExpCounts}
 """
-function build_channel(jobj)
-    Dict(build_sample.(jobj[:samples]))
+function build_channel(jobj; misc)
+    Dict(build_sample.(jobj[:samples]; misc))
 end
 
 """
@@ -64,5 +82,9 @@ end
 """
 function load_pyhfjson(path)
     jobj = JSON3.read(read(path))
-    Dict(obj[:name] => build_channel(obj) for obj in jobj[:channels])
+    mes = get(jobj, :measurements, Dict())
+    obs = get(jobj, :observations, Dict())
+    misc = Dict(:measurements => mes, :observations => obs)
+
+    Dict(obj[:name] => build_channel(obj; misc) for obj in jobj[:channels])
 end

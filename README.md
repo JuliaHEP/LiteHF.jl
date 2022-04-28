@@ -2,21 +2,21 @@
 
 ## Load `pyhf` JSON:
 ```julia
-julia> using Turing, Optim, LiteHF
+using LiteHF, Optim
 
-julia> pyhfmodel = load_pyhfjson("./sample.json");
+pydict = load_pyhfjson("./test/sample.json");
 
-julia> modifier_names, model = LiteHF.genmodel(pyhfmodel);
+expe, pri, pri_names = build_pyhf(pydict);
 
-julia> observed = [34,22,13,11];
+observed_data = [34,22,13,11];
 
-julia> optimize(model(observed), MAP(), [1,1])
-ModeResult with maximized lp of -13.51
-2-element Named Vector{Float64}
-A               │ 
-────────────────┼───────────
-Symbol("αs[1]") │    1.30648
-Symbol("αs[2]") │ -0.0605151
+# the 3-argument includes the prior ("constraint") term in likelihood
+NLL(αs) = -loglikelihoodof(expe, pri, observed_data)(αs)
+
+optimize(NLL, [1.0, 1.0]).minimizer
+# 2-element Vector{Float64}:
+#   1.3064374172547253
+#  -0.060413406717672286
 
 julia> modifier_names
 2-element Vector{String}:
