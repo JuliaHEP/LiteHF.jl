@@ -1,5 +1,18 @@
 using ValueShapes
 
+struct PyHFModel
+    expected
+    priors
+    prior_names
+    prior_inits::Vector{Float64}
+    LogLikelihood
+end
+
+function Base.show(io::IO, P::PyHFModel)
+    Nprior = length(P.prior_names)
+    print(io, "PyHFModel with $(Nprior) nuisance parameters.")
+end
+
 @generated function internal_expected(Es, Vs, αs)
     @assert Es <: Tuple
     @views expand(i) = i == 1 ? :(Es[1](αs[Vs[1]])) : :(+(Es[$i](αs[Vs[$i]]), $(expand(i-1))))
@@ -22,7 +35,7 @@ function build_pyhf(pyhfmodel)
     #### all_* are before de-duplicating
     all_expcounts = Tuple(
                      sample[2]
-                     for channel in pyhfmodel for sample in channel[2]
+                     for (name, channel) in pyhfmodel for sample in channel if name!="misc"
                     )
     all_v_names = [E.modifier_names for E in all_expcounts]
     all_names = reduce(vcat, all_v_names)
@@ -34,6 +47,8 @@ function build_pyhf(pyhfmodel)
     input_modifiers = [lookup[k] for k in unique_names]
     priornames = Tuple(Symbol.(unique_names))
     priors = NamedTupleDist(NamedTuple{priornames}(_prior.(input_modifiers)))
+    inits = Vector{Float64}(_init.(input_modifiers))
+    obs = pyhfmodel["misc"][:observations][1][:data]
 
     # Special case: same name can appear multiple times with different modifier type
     
@@ -47,9 +62,9 @@ function build_pyhf(pyhfmodel)
         αs -> internal_expected(Es, Vs, αs)
     end
 
-    # loglikelihood = pyhf_loglikelihoodof(expected, priors)
+    LL = pyhf_loglikelihoodof(expected, obs, priors)
 
-    return expected, priors, priornames
+    return PyHFModel(expected, priors, priornames, inits, LL)
 end
 
 """
@@ -65,7 +80,7 @@ function pyhf_loglikelihoodof(expected, obs)
         αs -> begin 
             expe = expected(αs)
             any(<(0), expe) && return -Inf
-            measurement = mapreduce(f, +, expe, obs)
+            measurement = mapreduce(f, + , expe, obs)
 
             return measurement
         end
@@ -73,6 +88,12 @@ function pyhf_loglikelihoodof(expected, obs)
     return L
 end
 
+@generated function internal_constrainteval(pris, αs)
+    @assert pris <: Tuple
+    @views expand(i) = i == 1 ? :(logpdf(pris[1], αs[1])) : 
+    :(+(logpdf(pris[$i], αs[$i]), $(expand(i-1))))
+    return expand(length(pris.parameters))
+end
 """
     pyhf_loglikelihoodof(expected, obs, priors)
     Return a callable Function that would calculate the log likelihood
@@ -83,12 +104,11 @@ end
 function pyhf_loglikelihoodof(expected, obs, priors)
     f(x, o) = logpdf(Poisson(x), o)
     L = let data = obs, pris = values(priors)
-        αs -> begin 
+        αs -> begin
             expe = expected(αs)
             any(<(0), expe) && return -Inf
             measurement = mapreduce(f, +, expe, obs)
-            constraint = mapreduce(logpdf, +, pris, αs)
-
+            constraint = internal_constrainteval(pris, αs)
             return measurement + constraint
         end
     end

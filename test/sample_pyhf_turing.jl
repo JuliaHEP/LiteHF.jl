@@ -1,20 +1,19 @@
-using LiteHF, Turing
+using LiteHF, Turing, Optim
 
-pydict = load_pyhfjson("./test/sample.json");
+dict = load_pyhfjson("./test/sample.json");
 
-expe, pri, pri_names = build_pyhf(pydict);
-
-observed_data = [34,22,13,11];
-
-# the 2-argument version does NOT include prior ("constraint") terms in likelihood
-mylikelihood = loglikelihoodof(expe, observed_data)
+const pyhfmodel = build_pyhf(dict);
+# unpack `ValueShapes` into just an array of prior distributions
+const priors_array = collect(values(pyhfmodel.priors))
 
 @model function mymodel(observed)
-    αs ~ arraydist(collect(values(pri)))
-    Turing.@addlogprob! mylikelihood(αs)
+    αs ~ arraydist(priors_array)
+    expected = pyhfmodel.expected(αs)
+    @. observed ~ Poisson(expected)
 end
 
-optimize(mymodel(observed_data), MAP(), [1.0, 1.0])
+observed_data = [34,22,13,11];
+@show optimize(mymodel(observed_data), MAP(), pyhfmodel.prior_inits)
 #ModeResult with maximized lp of -13.51
 # 2-element Named Vector{Float64}
 # A               │ 

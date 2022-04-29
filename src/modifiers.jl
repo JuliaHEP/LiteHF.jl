@@ -2,6 +2,7 @@ using Unrolled
 
 abstract type AbstractModifier end
 function _prior end
+function _init end
 
 """
     Histosys is defined by two vectors represending bin counts
@@ -16,11 +17,13 @@ struct Histosys{T<:AbstractInterp} <: AbstractModifier
 end
 Histosys(up, down) = Histosys(InterpCode0(up, down))
 _prior(::Histosys) = Normal()
+_init(::Histosys) = 0.0
 
 struct Normsys{T<:AbstractInterp} <: AbstractModifier
     interp::T
 end
 _prior(::Normsys) = Normal()
+_init(::Normsys) = 0.0
 
 """
     Normsys is defined by two multiplicative scalars
@@ -37,6 +40,7 @@ struct Normfactor <: AbstractModifier # is unconstrained
     Normfactor() = new(twoidentity)
 end
 _prior(::Normfactor) = Uniform(0, 10)
+_init(::Normfactor) = 1.0
 
 #FIXME: how does this work???
 # """
@@ -60,6 +64,7 @@ struct Staterror <: AbstractModifier
     Staterror(data) = new(data, twoidentity)
 end
 _prior(S::Staterror) = Normal(1, sqrt(S.δ2))
+_init(S::Staterror) = 1.0
 
 """
     Luminosity doesn't need interpolation, σ is provided at modifier construction time.
@@ -72,6 +77,7 @@ struct Lumi <: AbstractModifier
     Lumi(σ) = new(σ, twoidentity)
 end
 _prior(l::Lumi) = Normal(1, l.σ)
+_init(l::Lumi) = 1.0
 
 """
     Shapesys doesn't need interpolation
@@ -83,11 +89,11 @@ end
 
 struct ExpCounts{T, M}
     nominal::T
-    modifier_names::Vector{String}
+    modifier_names::Vector{Symbol}
     modifiers::M
 end
 
-ExpCounts(nominal, names::Vector{String}, modifiers::AbstractVector) = ExpCounts(nominal, names, tuple(modifiers...))
+ExpCounts(nominal, names::Vector{Symbol}, modifiers::AbstractVector) = ExpCounts(nominal, names, tuple(modifiers...))
 
 nmodifiers(E::ExpCounts) = length(E.modifiers)
 

@@ -4,24 +4,58 @@
 ```julia
 using LiteHF, Optim
 
-pydict = load_pyhfjson("./test/sample.json");
+dict = load_pyhfjson("./test/sample.json");
 
-expe, pri, pri_names = build_pyhf(pydict);
+pyhfmodel = build_pyhf(dict);
 
-observed_data = [34,22,13,11];
-
-# the 3-argument includes the prior ("constraint") term in likelihood
-NLL(αs) = -loglikelihoodof(expe, pri, observed_data)(αs)
-
-optimize(NLL, [1.0, 1.0]).minimizer
+@show Optim.maximizer(maximize(pyhfmodel.LogLikelihood, pyhfmodel.prior_inits))
 # 2-element Vector{Float64}:
 #   1.3064374172547253
 #  -0.060413406717672286
+@show pyhfmodel.prior_names
+# (:mu, :theta)
+```
 
-julia> modifier_names
-2-element Vector{String}:
- "mu"
- "theta"
+## `pyhf` JSON + Turing.jl:
+```julia
+using LiteHF, Turing, Optim
+
+dict = load_pyhfjson("./test/sample.json");
+
+const pyhfmodel = build_pyhf(dict);
+# unpack `ValueShapes` into just an array of prior distributions
+const priors_array = collect(values(pyhfmodel.priors))
+
+@model function mymodel(observed)
+    αs ~ arraydist(priors_array)
+    expected = pyhfmodel.expected(αs)
+    @. observed ~ Poisson(expected)
+end
+
+observed_data = [34,22,13,11];
+@show optimize(mymodel(observed_data), MAP(), pyhfmodel.prior_inits)
+#ModeResult with maximized lp of -13.51
+# 2-element Named Vector{Float64}
+# A               │ 
+# ────────────────┼───────────
+# Symbol("αs[1]") │    1.30648
+# Symbol("αs[2]") │ -0.0605151
+```
+
+## `pyhf` JSON + BAT.jl:
+```julia
+using LiteHF, BAT
+
+pydict = load_pyhfjson("./test/sample.json");
+
+pyhfmodel = build_pyhf(pydict);
+
+# the 2-argument version does NOT include prior ("constraint") terms in likelihood
+mylikelihood(αs) = BAT.LogDVal(pyhfmodel.LogLikelihood(αs))
+posterior = PosteriorDensity(mylikelihood, pyhfmodel.priors)
+
+@show bat_findmode(posterior).result
+# (mu = 1.3064647047644158, theta = -0.06049852104383994)
 ```
 
 ## Manual Example

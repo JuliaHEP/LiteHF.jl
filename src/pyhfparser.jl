@@ -23,11 +23,11 @@ end
 """
 function build_modifier!(jobj, names; misc)
     mod = build_modifier(jobj, _modifier_dict[jobj[:type]]; misc)
-    mod_name = jobj[:name]
+    mod_name = Symbol(jobj[:name])
     if mod isa Vector
         # for stuff like Staterror, which inflates to multiple `γ`
         for i in eachindex(mod)
-            push!(names, string(mod_name, "_bin$i"))
+            push!(names, Symbol(mod_name, "_bin$i"))
         end
     else
         push!(names, mod_name)
@@ -47,9 +47,9 @@ function build_modifier(modobj, modifier_type::Type{T}; misc) where T
     elseif T == Staterror
         T.(modobj[:data])
     elseif T == Lumi
-        paras = misc[:measurements][1]["config"]["parameters"]
-        lumi_idx = findfirst(x->x["name"] == modobj[:name], paras)
-        σ = only(paras[lumi_idx]["sigmas"])
+        paras = misc[:measurements][1][:config][:parameters]
+        lumi_idx = findfirst(x->x[:name] == modobj[:name], paras)
+        σ = only(paras[lumi_idx][:sigmas])
         T(σ)
     #FIXME: how does it work???
     # elseif T == Shapesys
@@ -63,7 +63,7 @@ end
     build_sample(rawjdict[:channels][1][:samples][2]) =>
     Pair{String, ExpCounts}
 """
-function build_sample(jobj, names=String[]; misc)
+function build_sample(jobj, names=Symbol[]; misc)
     modifiers = build_modifier!.(jobj[:modifiers], Ref(names); misc)
     modifiers = any(x->x <: Vector, typeof.(modifiers)) ? reduce(vcat, modifiers) : modifiers #flatten it
     jobj[:name] => ExpCounts(jobj[:data], names, modifiers)
@@ -86,5 +86,7 @@ function load_pyhfjson(path)
     obs = get(jobj, :observations, Dict())
     misc = Dict(:measurements => mes, :observations => obs)
 
-    Dict(obj[:name] => build_channel(obj; misc) for obj in jobj[:channels])
+    res = Dict{String, Any}(obj[:name] => build_channel(obj; misc) for obj in jobj[:channels])
+    res["misc"] = misc
+    res
 end
