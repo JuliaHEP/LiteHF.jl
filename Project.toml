@@ -11,6 +11,7 @@ Unrolled = "9602ed7d-8fef-5bc8-8597-8f21381861e8"
 ValueShapes = "136a8f8c-c49b-4edb-8b98-f3d64d48be8f"
 
 [compat]
+Distributions = "0.25"
 JSON3 = "1"
 StaticArrays = "1"
 Unrolled = "0.1"
