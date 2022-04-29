@@ -72,14 +72,14 @@ end
     `δ` / nominal is taken to be the `σ` of the prior, i.e. `α ~ Normal(1, δ/nominal)`
 """
 struct Staterror{T} <: AbstractModifier
-    δ::Float64
+    σ::Float64
     interp::T
-    function Staterror(δ, nthbin)
+    function Staterror(σ, nthbin)
         f = bintwoidentity(nthbin)
-        new{typeof(f)}(δ, f)
+        new{typeof(f)}(σ, f)
     end
 end
-_prior(S::Staterror) = Normal(1, S.δ)
+_prior(S::Staterror) = Normal(1, S.σ)
 _init(S::Staterror) = 1.0
 
 """
