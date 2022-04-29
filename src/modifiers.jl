@@ -31,7 +31,12 @@ _init(::Normsys) = 0.0
 Normsys(up::Number, down::Number) = Normsys(InterpCode1(up, down))
 Normsys(nominal, ups, downs) = Normsys(InterpCode1(nominal, ups, downs))
 
+"""
+    Identity function that takes two argument. Used for interpolation code that
+    doesn't do any interpolation.
+"""
 twoidentity(_, α) = α
+
 """
     Normfactor is unconstrained, so `interp` is just identity.
 """
@@ -54,16 +59,27 @@ _init(::Normfactor) = 1.0
 # end
 # _prior(S::Staterror) = Poisson(inv(S.σs^2))
 
-"""
-    Staterror doesn't need interpolation, but it inflates to `N` input parameters instead
-    of one, where `N` is number of bins affected.
-"""
-struct Staterror <: AbstractModifier
-    δ2::Float64
-    interp::typeof(twoidentity)
-    Staterror(data) = new(data, twoidentity)
+function bintwoidentity(nthbin)
+    (nominal, α) -> begin
+        Tuple(i == nthbin ? α : 1.0 for i = eachindex(nominal))
+    end
 end
-_prior(S::Staterror) = Normal(1, sqrt(S.δ2))
+"""
+    Staterror doesn't need interpolation, but it's a per-bin modifier.
+    Information regarding which bin is the target is recorded in `bintwoidentity`.
+
+    The `δ` is the absolute yield uncertainty in each bin, and the relative uncertainty:
+    `δ` / nominal is taken to be the `σ` of the prior, i.e. `α ~ Normal(1, δ/nominal)`
+"""
+struct Staterror{T} <: AbstractModifier
+    δ::Float64
+    interp::T
+    function Staterror(δ, nthbin)
+        f = bintwoidentity(nthbin)
+        new{typeof(f)}(δ, f)
+    end
+end
+_prior(S::Staterror) = Normal(1, S.δ)
 _init(S::Staterror) = 1.0
 
 """
@@ -105,7 +121,7 @@ ExpCounts(nominal, names::Vector{Symbol}, modifiers::AbstractVector) = ExpCounts
             # additive
             additive += modifier.interp(nominal, α)
         else
-            # multiplicative
+            # multiplicative, staterror is per-bin
             factor = factor .* modifier.interp(nominal, α)
         end
     end

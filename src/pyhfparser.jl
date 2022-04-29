@@ -21,8 +21,8 @@ end
     build_modifier(rawjdict[:channels][1][:samples][2][:modifiers][1]) =>
     <:AbstractModifier
 """
-function build_modifier!(jobj, names; misc)
-    mod = build_modifier(jobj, _modifier_dict[jobj[:type]]; misc)
+function build_modifier!(jobj, names; misc, nominal)
+    mod = build_modifier(jobj, _modifier_dict[jobj[:type]]; misc, nominal)
     mod_name = Symbol(jobj[:name])
     if mod isa Vector
         # for stuff like Staterror, which inflates to multiple `γ`
@@ -39,13 +39,15 @@ end
     build_modifier(...[:modifiers][1][:data], Type) =>
     <:AbstractModifier
 """
-function build_modifier(modobj, modifier_type::Type{T}; misc) where T
+function build_modifier(modobj, modifier_type::Type{T}; misc, nominal) where T
+    moddata = modobj[:data]
     if T == Histosys
-        T(hilo_data(modobj[:data])...)
+        T(hilo_data(moddata)...)
     elseif T == Normsys
-        T(hilo_factor(modobj[:data])...)
+        T(hilo_factor(moddata)...)
     elseif T == Staterror
-        T.(modobj[:data])
+        # each Staterror keepds track of which bin it should modifier
+        T.(moddata ./ nominal, eachindex(moddata))
     elseif T == Lumi
         paras = misc[:measurements][1][:config][:parameters]
         lumi_idx = findfirst(x->x[:name] == modobj[:name], paras)
@@ -64,7 +66,7 @@ end
     Pair{String, ExpCounts}
 """
 function build_sample(jobj, names=Symbol[]; misc)
-    modifiers = build_modifier!.(jobj[:modifiers], Ref(names); misc)
+    modifiers = build_modifier!.(jobj[:modifiers], Ref(names); misc, nominal=jobj[:data])
     modifiers = any(x->x <: Vector, typeof.(modifiers)) ? reduce(vcat, modifiers) : modifiers #flatten it
     jobj[:name] => ExpCounts(jobj[:data], names, modifiers)
 end
