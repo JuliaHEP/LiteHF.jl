@@ -2,6 +2,13 @@ module LiteHF
 
 using Distributions
 
+struct FlatPrior{T} <: ContinuousUnivariateDistribution
+    a::T
+    b::T
+end
+
+Distributions.logpdf(d::FlatPrior, x::Real) = zero(x)
+
 export pyhf_loglikelihoodof
 
 # interpolations

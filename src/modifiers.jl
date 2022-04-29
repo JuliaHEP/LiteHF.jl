@@ -39,7 +39,7 @@ struct Normfactor <: AbstractModifier # is unconstrained
     interp::typeof(twoidentity)
     Normfactor() = new(twoidentity)
 end
-_prior(::Normfactor) = Uniform(0, 10)
+_prior(::Normfactor) = FlatPrior(0, 10)
 _init(::Normfactor) = 1.0
 
 #FIXME: how does this work???

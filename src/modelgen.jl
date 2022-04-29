@@ -94,12 +94,15 @@ end
     :(+(logpdf(pris[$i], αs[$i]), $(expand(i-1))))
     return expand(length(pris.parameters))
 end
+
 """
     pyhf_loglikelihoodof(expected, obs, priors)
     Return a callable Function that would calculate the log likelihood
 
     !!!Note
     The "constraint" terms that come from prior IS included here.
+
+    `FlatPrior` prior shouldn't have contribution to constraint
 """
 function pyhf_loglikelihoodof(expected, obs, priors)
     f(x, o) = logpdf(Poisson(x), o)
