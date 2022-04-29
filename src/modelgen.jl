@@ -34,14 +34,17 @@ end
 function build_pyhf(pyhfmodel)
     #### all_* are before de-duplicating
     all_expcounts = Tuple(
-                     sample[2]
-                     for (name, channel) in pyhfmodel for sample in channel if name!="misc"
-                    )
-    all_v_names = [E.modifier_names for E in all_expcounts]
+                      sample[2]
+                      for (name, channel) in pyhfmodel for sample in channel if name!="misc"
+                     )
+    all_v_names = Any[E.modifier_names for E in all_expcounts]
     all_names = reduce(vcat, all_v_names)
-    all_modifiers = mapreduce(collect, vcat, 
-                              E.modifiers for E in all_expcounts
-                             )
+    all_modifiers = []
+    counts = Int[]
+    for E in all_expcounts
+        append!(all_modifiers, E.modifiers)
+        push!(counts, length(E.modifiers))
+    end
     lookup = Dict(all_names .=> all_modifiers)
     unique_names = unique(all_names)
     input_modifiers = [lookup[k] for k in unique_names]
@@ -54,12 +57,11 @@ function build_pyhf(pyhfmodel)
     
     # if masks[1] == [1,2,4] that means the first `ExpCounts(αs[[1,2,4]])`
     masks = Tuple([findfirst(==(i), unique_names) for i in names] for names in all_v_names)
-    counts = nmodifiers.(all_expcounts)
     # each mask should have enough parameter to feed the ExpCount
     @assert all(length.(masks) .== counts)
 
     expected = let Es = all_expcounts, Vs = masks
-        αs -> internal_expected(Es, Vs, αs)
+    αs -> internal_expected(Es, Vs, αs)
     end
 
     LL = pyhf_loglikelihoodof(expected, obs, priors)

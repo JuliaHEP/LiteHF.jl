@@ -95,8 +95,6 @@ end
 
 ExpCounts(nominal, names::Vector{Symbol}, modifiers::AbstractVector) = ExpCounts(nominal, names, tuple(modifiers...))
 
-nmodifiers(E::ExpCounts) = length(E.modifiers)
-
 @unroll function _expkernel(modifiers, nominal, αs)
     additive = float(nominal)
     factor = ones(length(additive))
