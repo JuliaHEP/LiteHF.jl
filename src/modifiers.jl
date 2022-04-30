@@ -1,4 +1,5 @@
 using Unrolled
+using SpecialFunctions: logabsgamma
 
 abstract type AbstractModifier end
 function _prior end
@@ -47,17 +48,24 @@ end
 _prior(::Normfactor) = FlatPrior(0, 10)
 _init(::Normfactor) = 1.0
 
-#FIXME: how does this work???
-# """
-#     Shapesys doesn't need interpolation, but it inflates to `N` input parameters instead
-#     of one, where `N` is number of bins affected.
-# """
-# struct Shapesys <: AbstractModifier
-#     σs::Float64
-#     interp::typeof(twoidentity)
-#     Staterror(data) = new(data, twoidentity)
-# end
-# _prior(S::Staterror) = Poisson(inv(S.σs^2))
+"""
+    Shapesys doesn't need interpolation, similar to `Staterror`
+"""
+struct Shapesys{T} <: AbstractModifier
+    σn2::Float64
+    interp::T
+    function Shapesys(σ, nthbin)
+        f = bintwoidentity(nthbin)
+        new{typeof(f)}(σ, f)
+    end
+end
+struct RelaxedPoisson{T} <: ContinuousUnivariateDistribution
+    λ::T
+end
+_relaxedpoislogpdf(d::RelaxedPoisson, x) = x*log(d.λ) - d.λ - logabsgamma(x + 1.0)[1]
+Distributions.logpdf(d::RelaxedPoisson, x) = _relaxedpoislogpdf(d, x*d.λ)
+_prior(S::Shapesys) = RelaxedPoisson(S.σn2)
+_init(S::Shapesys) = 1.0
 
 function bintwoidentity(nthbin)
     (nominal, α) -> begin
@@ -94,14 +102,6 @@ struct Lumi <: AbstractModifier
 end
 _prior(l::Lumi) = Normal(1, l.σ)
 _init(l::Lumi) = 1.0
-
-"""
-    Shapesys doesn't need interpolation
-"""
-struct Shapesys<: AbstractModifier
-    interp::typeof(twoidentity)
-    Shapesys() = new(twoidentity)
-end
 
 struct ExpCounts{T, M}
     nominal::T

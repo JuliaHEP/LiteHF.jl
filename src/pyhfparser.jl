@@ -21,8 +21,8 @@ end
     build_modifier(rawjdict[:channels][1][:samples][2][:modifiers][1]) =>
     <:AbstractModifier
 """
-function build_modifier!(jobj, names; misc, mcstats)
-    mod = build_modifier(jobj, _modifier_dict[jobj[:type]]; misc, mcstats)
+function build_modifier!(jobj, names; misc, mcstats, parent)
+    mod = build_modifier(jobj, _modifier_dict[jobj[:type]]; misc, mcstats, parent)
     mod_name = Symbol(jobj[:name])
     if mod isa Vector
         # for stuff like Staterror, which inflates to multiple `γ`
@@ -39,7 +39,7 @@ end
     build_modifier(...[:modifiers][1][:data], Type) =>
     <:AbstractModifier
 """
-function build_modifier(modobj, modifier_type::Type{T}; misc, mcstats) where T
+function build_modifier(modobj, modifier_type::Type{T}; misc, mcstats, parent) where T
     modname = modobj[:name]
     moddata = modobj[:data]
     if T == Histosys
@@ -55,9 +55,9 @@ function build_modifier(modobj, modifier_type::Type{T}; misc, mcstats) where T
         lumi_idx = findfirst(x->x[:name] == modname, paras)
         σ = only(paras[lumi_idx][:sigmas])
         T(σ)
-    #FIXME: how does it work???
-    # elseif T == Shapesys
-    #     T.(dataobj)
+    elseif T == Shapesys
+        nominal = parent[:data]
+        T.((nominal ./ moddata).^2, eachindex(moddata))
     else
         T()
     end
@@ -68,7 +68,7 @@ end
     ExpCounts
 """
 function build_sample(jobj, names=Symbol[]; misc, mcstats)
-    modifiers = build_modifier!.(jobj[:modifiers], Ref(names); misc, mcstats)
+    modifiers = build_modifier!.(jobj[:modifiers], Ref(names); misc, mcstats, parent=jobj)
     modifiers = any(x->x <: Vector, typeof.(modifiers)) ? reduce(vcat, modifiers) : modifiers #flatten it
     @assert length(names) == length(modifiers)
     ExpCounts(jobj[:data], names, modifiers)
