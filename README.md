@@ -1,4 +1,7 @@
-# LiteHF.jl [WIP]
+# LiteHF.jl
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliahep.github.io/LiteHF.jl/dev/)
+[![Build Status](https://github.com/JuliaHEP/LiteHF.jl/workflows/CI/badge.svg)](https://github.com/JuliaHEP/LiteHF.jl/actions)
+[![Codecov](https://codecov.io/gh/JuliaHEP/LiteHF.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaHEP/LiteHF.jl)
 
 ## Load `pyhf` JSON:
 ```julia
@@ -50,7 +53,6 @@ pydict = load_pyhfjson("./test/sample.json");
 
 pyhfmodel = build_pyhf(pydict);
 
-# the 2-argument version does NOT include prior ("constraint") terms in likelihood
 mylikelihood(αs) = BAT.LogDVal(pyhfmodel.LogLikelihood(αs))
 posterior = PosteriorDensity(mylikelihood, pyhfmodel.priors)
 
@@ -86,7 +88,7 @@ end
 
 ###### Turing.jl models
 @model function binned_b(bincounts)
-    μ ~ Uniform(0, 6)
+    μ ~ Turing.Flat()
     θs ~ filldist(Normal(), 2)
 
     expected = expected_bincounts2(μ, θs)

@@ -1,6 +1,6 @@
 using LiteHF, Turing, Optim
 
-dict = load_pyhfjson("./test/sample.json");
+dict = load_pyhfjson("./test/pyhfjson/sample.json");
 
 const pyhfmodel = build_pyhf(dict);
 # unpack `ValueShapes` into just an array of prior distributions

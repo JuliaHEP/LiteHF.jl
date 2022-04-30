@@ -1,2 +1,3 @@
 # for tests
 test/*.py linguist-detectable=false
+test/**/*.json linguist-detectable=false

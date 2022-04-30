@@ -73,8 +73,8 @@ end
     pyhf_loglikelihoodof(expected, obs)
     Return a callable Function that would calculate the log likelihood
 
-    !!!Note
-    The "constraint" terms that come from prior is NOT included here.
+    !!! note
+        The "constraint" terms that come from prior is NOT included here.
 """
 function pyhf_loglikelihoodof(expected, obs)
     f(x, o) = logpdf(Poisson(x), o)
@@ -101,8 +101,8 @@ end
     pyhf_loglikelihoodof(expected, obs, priors)
     Return a callable Function that would calculate the log likelihood
 
-    !!!Note
-    The "constraint" terms that come from prior IS included here.
+    !!! note
+        The "constraint" terms that come from prior IS included here.
 
     `FlatPrior` prior shouldn't have contribution to constraint
 """
