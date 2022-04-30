@@ -45,8 +45,22 @@ struct Normfactor <: AbstractModifier # is unconstrained
     interp::typeof(twoidentity)
     Normfactor() = new(twoidentity)
 end
-_prior(::Normfactor) = FlatPrior(0, 10)
+_prior(::Normfactor) = FlatPrior(0, 5)
 _init(::Normfactor) = 1.0
+
+"""
+    Shapefactor is unconstrained, so `interp` is just identity. Unlike `Normfactor`,
+    this is per-bin
+"""
+struct Shapefactor <: AbstractModifier # is unconstrained
+    interp::typeof(twoidentity)
+    function Shapefactor(nthbin)
+        f = bintwoidentity(nthbin)
+        new{typeof(f)}(f)
+    end
+end
+_prior(::Shapefactor) = FlatPrior(0, 5)
+_init(::Shapefactor) = 1.0
 
 """
     Shapesys doesn't need interpolation, similar to `Staterror`

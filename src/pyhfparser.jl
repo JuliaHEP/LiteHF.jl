@@ -58,6 +58,8 @@ function build_modifier(modobj, modifier_type::Type{T}; misc, mcstats, parent) w
     elseif T == Shapesys
         nominal = parent[:data]
         T.((nominal ./ moddata).^2, eachindex(moddata))
+    elseif T == Shapefactor
+        T.(eachindex(moddata))
     else
         T()
     end
