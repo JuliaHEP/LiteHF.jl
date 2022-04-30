@@ -7,6 +7,7 @@ const _modifier_dict = Dict(
                             "shapesys" => Shapesys,
                             "staterror" => Staterror,
                             "lumi" => Lumi,
+                            "shapefactor" => Shapefactor,
                            )
 
 

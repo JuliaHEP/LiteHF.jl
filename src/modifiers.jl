@@ -52,8 +52,8 @@ _init(::Normfactor) = 1.0
     Shapefactor is unconstrained, so `interp` is just identity. Unlike `Normfactor`,
     this is per-bin
 """
-struct Shapefactor <: AbstractModifier # is unconstrained
-    interp::typeof(twoidentity)
+struct Shapefactor{T} <: AbstractModifier # is unconstrained
+    interp::T
     function Shapefactor(nthbin)
         f = bintwoidentity(nthbin)
         new{typeof(f)}(f)
