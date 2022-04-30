@@ -1,7 +1,7 @@
 # LiteHF.jl
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliahep.github.io/LiteHF.jl/dev/)
 [![Build Status](https://github.com/JuliaHEP/LiteHF.jl/workflows/CI/badge.svg)](https://github.com/JuliaHEP/LiteHF.jl/actions)
-[![Codecov](https://codecov.io/gh/JuliaHEP/LiteHF.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaHEP/LiteHF.jl)
+[![Codecov](https://codecov.io/gh/JuliaHEP/LiteHF.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaHEP/LiteHF.jl)
 
 ## Load `pyhf` JSON:
 ```julia
