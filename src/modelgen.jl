@@ -23,12 +23,12 @@ end
     build_pyhf(load_pyhfjson(path)) 
         -> expected::Function, priors::NamedTupleDist, priornames::Tuple{Symbol}
 
-    the `expected(αs)` is a function that takes vector or tuple of length `N`, where `N` is also the
-    length of `priors` and `priornames`. In other words, the three objects returned
-    are aligned.
+the `expected(αs)` is a function that takes vector or tuple of length `N`, where `N` is also the
+length of `priors` and `priornames`. In other words, the three objects returned
+are aligned.
 
-    The output of `forward_model()` is always a vector of length `N`, represending the expected
-    bin counts when all parameters (`αs`) taking a set of specific values.
+The output of `forward_model()` is always a vector of length `N`, represending the expected
+bin counts when all parameters (`αs`) taking a set of specific values.
 
 """
 function build_pyhf(pyhfmodel)
@@ -71,10 +71,11 @@ end
 
 """
     pyhf_loglikelihoodof(expected, obs)
-    Return a callable Function that would calculate the log likelihood
 
-    !!! note
-        The "constraint" terms that come from prior is NOT included here.
+Return a callable Function that would calculate the log likelihood
+
+!!! note
+    The "constraint" terms that come from prior is NOT included here.
 """
 function pyhf_loglikelihoodof(expected, obs)
     f(x, o) = logpdf(Poisson(x), o)
@@ -99,12 +100,12 @@ end
 
 """
     pyhf_loglikelihoodof(expected, obs, priors)
-    Return a callable Function that would calculate the log likelihood
 
-    !!! note
-        The "constraint" terms that come from prior IS included here.
+Return a callable Function that would calculate the log likelihood
+`FlatPrior` prior shouldn't have contribution to constraint
 
-    `FlatPrior` prior shouldn't have contribution to constraint
+!!! note
+    The "constraint" terms that come from prior IS included here.
 """
 function pyhf_loglikelihoodof(expected, obs, priors)
     f(x, o) = logpdf(Poisson(x), o)

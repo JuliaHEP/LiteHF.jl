@@ -6,8 +6,8 @@ function _prior end
 function _init end
 
 """
-    Histosys is defined by two vectors represending bin counts
-    in `hi_data` and `lo_data`
+Histosys is defined by two vectors represending bin counts
+in `hi_data` and `lo_data`
 """
 struct Histosys{T<:AbstractInterp} <: AbstractModifier
     interp::T
@@ -27,7 +27,7 @@ _prior(::Normsys) = Normal()
 _init(::Normsys) = 0.0
 
 """
-    Normsys is defined by two multiplicative scalars
+Normsys is defined by two multiplicative scalars
 """
 Normsys(up::Number, down::Number) = Normsys(InterpCode1(up, down))
 Normsys(nominal, ups, downs) = Normsys(InterpCode1(nominal, ups, downs))
@@ -39,7 +39,7 @@ Normsys(nominal, ups, downs) = Normsys(InterpCode1(nominal, ups, downs))
 twoidentity(_, α) = α
 
 """
-    Normfactor is unconstrained, so `interp` is just identity.
+Normfactor is unconstrained, so `interp` is just identity.
 """
 struct Normfactor <: AbstractModifier # is unconstrained
     interp::typeof(twoidentity)
@@ -49,8 +49,8 @@ _prior(::Normfactor) = FlatPrior(0, 5)
 _init(::Normfactor) = 1.0
 
 """
-    Shapefactor is unconstrained, so `interp` is just identity. Unlike `Normfactor`,
-    this is per-bin
+Shapefactor is unconstrained, so `interp` is just identity. Unlike `Normfactor`,
+this is per-bin
 """
 struct Shapefactor{T} <: AbstractModifier # is unconstrained
     interp::T
@@ -63,7 +63,7 @@ _prior(::Shapefactor) = FlatPrior(0, 5)
 _init(::Shapefactor) = 1.0
 
 """
-    Shapesys doesn't need interpolation, similar to `Staterror`
+Shapesys doesn't need interpolation, similar to `Staterror`
 """
 struct Shapesys{T} <: AbstractModifier
     σn2::Float64
@@ -87,11 +87,11 @@ function bintwoidentity(nthbin)
     end
 end
 """
-    Staterror doesn't need interpolation, but it's a per-bin modifier.
-    Information regarding which bin is the target is recorded in `bintwoidentity`.
+Staterror doesn't need interpolation, but it's a per-bin modifier.
+Information regarding which bin is the target is recorded in `bintwoidentity`.
 
-    The `δ` is the absolute yield uncertainty in each bin, and the relative uncertainty:
-    `δ` / nominal is taken to be the `σ` of the prior, i.e. `α ~ Normal(1, δ/nominal)`
+The `δ` is the absolute yield uncertainty in each bin, and the relative uncertainty:
+`δ` / nominal is taken to be the `σ` of the prior, i.e. `α ~ Normal(1, δ/nominal)`
 """
 struct Staterror{T} <: AbstractModifier
     σ::Float64
@@ -105,9 +105,9 @@ _prior(S::Staterror) = Normal(1, S.σ)
 _init(S::Staterror) = 1.0
 
 """
-    Luminosity doesn't need interpolation, σ is provided at modifier construction time.
-    In `pyhf` JSON, this  information lives in the "Measurement" section, usually near the end of
-    the JSON file.
+Luminosity doesn't need interpolation, σ is provided at modifier construction time.
+In `pyhf` JSON, this  information lives in the "Measurement" section, usually near the end of
+the JSON file.
 """
 struct Lumi <: AbstractModifier
     σ::Float64
