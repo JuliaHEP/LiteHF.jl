@@ -1,5 +1,16 @@
 using ValueShapes
 
+"""
+    struct PyHFModel
+        expected
+        priors
+        prior_names
+        prior_inits::Vector{Float64}
+        LogLikelihood
+    end
+
+Struct for holding result from [build_pyhf](@ref).
+"""
 struct PyHFModel
     expected
     priors
@@ -13,6 +24,22 @@ function Base.show(io::IO, P::PyHFModel)
     print(io, "PyHFModel with $(Nprior) nuisance parameters.")
 end
 
+"""
+    internal_expected(Es, Vs, αs)
+
+The `@generated` function that computes expected counts in `PyHFModel.expected()` evaluation.
+The `Vs::NTuple{N, Vector{Int64}}` has the same length as `Es::NTuple{N, ExpCounts}`.
+
+In general `αs` is shorter than `Es` and `Vs` because a given nuisance parameter `α` may appear
+in multiple sample / modifier.
+
+!!! note
+    If for example `Vs[1] = [1,3,4]`, it means that the first `ExpCount` in `Es` is evaluated with
+    ```
+    Es[1](@view αs[[1,3,4]])
+    ```
+    and so on.
+"""
 @generated function internal_expected(Es, Vs, αs)
     @assert Es <: Tuple
     @views expand(i) = i == 1 ? :(Es[1](αs[Vs[1]])) : :(+(Es[$i](αs[Vs[$i]]), $(expand(i-1))))

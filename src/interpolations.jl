@@ -1,5 +1,11 @@
 abstract type AbstractInterp end
 
+"""
+    InterpCode0{T}
+
+Callable struct for interpolation for additive modifier.
+Code0 is the two-piece linear interpolation.
+"""
 struct InterpCode0{T} <: AbstractInterp
     I_up::T
     I_down::T
@@ -14,6 +20,12 @@ function (i::InterpCode0)(I0, α)
     α * vs
 end
 
+"""
+    InterpCode1{T}
+
+Callable struct for interpolation for multiplicative modifier.
+Code1 is the exponential interpolation.
+"""
 struct InterpCode1 <: AbstractInterp
     f_up::Float64
     f_down::Float64
@@ -56,6 +68,12 @@ function (i::InterpCode2)(α)
 end
 
 
+"""
+    InterpCode4{T}
+
+Callable struct for interpolation for additive modifier.
+Code4 is the exponential + 6-order polynomial interpolation.
+"""
 struct InterpCode4{T<:AbstractVector, N<:Number} <: AbstractInterp
     I_up::T
     I_down::T

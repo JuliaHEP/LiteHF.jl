@@ -1,5 +1,6 @@
 using Unrolled
 using SpecialFunctions: logabsgamma
+using LogExpFunctions: xlogy
 
 abstract type AbstractModifier end
 function _prior end
@@ -73,10 +74,20 @@ struct Shapesys{T} <: AbstractModifier
         new{typeof(f)}(σ, f)
     end
 end
+
+"""
+    RelaxedPoisson
+
+Poisson with `logpdf` continuous in `k`. Essentially by replacing denominator with `gamma` function.
+
+!!! warning
+    The `Distributions.logpdf` has been redefined to be `logpdf(d::RelaxedPoisson, x) = `logpdf(d, x*d.λ)`.
+    This is to reproduce the Poisson constraint term in `pyhf`, which is a hack introduced for Asimov dataset.
+"""
 struct RelaxedPoisson{T} <: ContinuousUnivariateDistribution
     λ::T
 end
-_relaxedpoislogpdf(d::RelaxedPoisson, x) = x*log(d.λ) - d.λ - logabsgamma(x + 1.0)[1]
+_relaxedpoislogpdf(d::RelaxedPoisson, x) = xlogy(x, d.λ) - d.λ - logabsgamma(x + 1.0)[1]
 Distributions.logpdf(d::RelaxedPoisson, x) = _relaxedpoislogpdf(d, x*d.λ)
 _prior(S::Shapesys) = RelaxedPoisson(S.σn2)
 _init(S::Shapesys) = 1.0
@@ -86,6 +97,7 @@ function bintwoidentity(nthbin)
         Tuple(i == nthbin ? α : 1.0 for i = eachindex(nominal))
     end
 end
+
 """
 Staterror doesn't need interpolation, but it's a per-bin modifier.
 Information regarding which bin is the target is recorded in `bintwoidentity`.
@@ -117,6 +129,16 @@ end
 _prior(l::Lumi) = Normal(1, l.σ)
 _init(l::Lumi) = 1.0
 
+"""
+    struct ExpCounts{T, M} #M is a long Tuple for unrolling purpose.
+        nominal::T
+        modifier_names::Vector{Symbol}
+        modifiers::M
+    end
+
+A callable struct that returns the expected count given modifier nuisance parameter values.
+The # of parameters passed must equal to length of `modifiers`. See [_expkernel](@ref)
+"""
 struct ExpCounts{T, M}
     nominal::T
     modifier_names::Vector{Symbol}
@@ -125,6 +147,11 @@ end
 
 ExpCounts(nominal, names::Vector{Symbol}, modifiers::AbstractVector) = ExpCounts(nominal, names, tuple(modifiers...))
 
+"""
+    _expkernel(modifiers, nominal, αs)
+
+The `Unrolled.@unroll` kernel function that computs the expected counts.
+"""
 @unroll function _expkernel(modifiers, nominal, αs)
     additive = float(nominal)
     factor = ones(length(additive))
@@ -149,7 +176,7 @@ function (E::ExpCounts)(αs)
     return _expkernel(modifiers, nominal, αs)
 end
 
-for T in (Normsys, Normfactor, Histosys, Staterror, Lumi)
+for T in (Normsys, Normfactor, Histosys, Staterror, Lumi, Shapefactor)
     @eval function Base.show(io::IO, E::$T)
         interp = Base.typename(typeof(E.interp)).name
         print(io, $T, "{$interp}")
