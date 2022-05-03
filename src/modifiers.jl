@@ -75,7 +75,7 @@ end
 Poisson with `logpdf` continuous in `k`. Essentially by replacing denominator with `gamma` function.
 
 !!! warning
-    The `Distributions.logpdf` has been redefined to be `logpdf(d::RelaxedPoisson, x) = `logpdf(d, x*d.λ)`.
+    The `Distributions.logpdf` has been redefined to be `logpdf(d::RelaxedPoisson, x) = logpdf(d, x*d.λ)`.
     This is to reproduce the Poisson constraint term in `pyhf`, which is a hack introduced for Asimov dataset.
 """
 struct RelaxedPoisson{T} <: ContinuousUnivariateDistribution
@@ -87,8 +87,10 @@ _prior(S::Shapesys) = RelaxedPoisson(S.σn2)
 _init(S::Shapesys) = 1.0
 
 function binidentity(nbins, nthbin)
-    α -> begin
-        Tuple(i == nthbin ? α : 1.0 for i = 1:nbins)
+    function (α::T) where T
+        res = zeros(T, nbins)
+        res[nthbin] = α
+        res
     end
 end
 
@@ -149,7 +151,7 @@ function exp_mod!(modifier::Histosys, additive, factor, α)
     additive, factor
 end
 function exp_mod!(modifier, additive, factor, α)
-    factor *= modifier.interp(α)
+    factor = factor .* modifier.interp(α)
     additive, factor
 end
 
@@ -165,7 +167,7 @@ The `Unrolled.@unroll` kernel function that computs the expected counts.
     additive = float(nominal)
     factor = ones(length(additive))
     @unroll for i in 1:length(modifiers)
-        additive, factor = exp_mod!(modifiers[i], additive, factor, αs[i])
+        @inbounds additive, factor = exp_mod!(modifiers[i], additive, factor, αs[i])
     end
     return factor .* additive
 end

@@ -70,12 +70,10 @@ function build_pyhf(pyhfmodel)
 
     # intentional type-insability, avoid latency
     all_expected = []
-    all_masks = []
     all_lookup = Dict()
     for c in channels
         exp, lk = build_pyhfchannel(c, global_unique)
         push!(all_expected, exp)
-        # push!(all_masks, mk)
         merge!(all_lookup, lk)
     end
 
@@ -113,8 +111,6 @@ function build_pyhfchannel(channel, global_unique)
         αs -> internal_expected(Es, Vs, αs)
     end
     return expected, lookup
-    # @show all_expcounts[1]
-    # return all_expcounts, masks, lookup
 end
 
 """
