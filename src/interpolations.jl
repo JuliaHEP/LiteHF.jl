@@ -7,17 +7,19 @@ Callable struct for interpolation for additive modifier.
 Code0 is the two-piece linear interpolation.
 """
 struct InterpCode0{T} <: AbstractInterp
-    I_up::T
-    I_down::T
+    Δ_up::T
+    Δ_down::T
 end
 
-function (i::InterpCode0)(I0, α)
-    vs = if α >= 0
-        (i.I_up - I0)
-    else
-        (I0 - i.I_down)
-    end
-    α * vs
+function InterpCode0(I0, I_up::T, I_down::T) where {T<:AbstractVector}
+    Δ_up = I_up - I0
+    Δ_down = I0 - I_down
+    InterpCode0(Δ_up, Δ_down)
+end
+
+function (i::InterpCode0)(α)
+    vs = ifelse(α >= 0, i.Δ_up, i.Δ_down)
+    return vs*α
 end
 
 """
@@ -37,7 +39,7 @@ function InterpCode1(I0, I_up::T, I_down::T) where {T<:AbstractVector}
     InterpCode1(f_up, f_down)
 end
 
-function (i::InterpCode1)(I0, α)
+function (i::InterpCode1)(α)
     if α >= 0
         (i.f_up)^α
     else
@@ -81,15 +83,15 @@ struct InterpCode4{T<:AbstractVector, N<:Number} <: AbstractInterp
     inver::Matrix{Float64}
 end
 
-function InterpCode4(I_up, I_down; α0=1)
+function InterpCode4(I_0, I_up, I_down; α0=1)
     inver = _interp4_inverse(α0)
-    InterpCode4(I_up, I_down, α0, inver)
+    InterpCode4(I_up/I0, I_down/I0, α0, inver)
 end
 
-function (i::InterpCode4)(I0, α)
+function (i::InterpCode4)(α)
     (; I_up, I_down, inver, α0) = i
-    delta_up = @. I_up / I0
-    delta_down = @. I_down / I0
+    delta_up = I_up
+    delta_down = I_down
     mult = if α >= α0
         @. (delta_up) ^ α
     elseif α <= -α0
@@ -108,7 +110,7 @@ function (i::InterpCode4)(I0, α)
         coefficients = inver * b
         1 .+ sum(coefficients[i] * α^i for i=1:6)
     end
-    @. I0 * (mult - 1)
+    @. mult - 1
 end
 
 function _interp4_inverse(α0)

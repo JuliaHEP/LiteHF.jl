@@ -43,22 +43,24 @@ end
 function build_modifier(modobj, modifier_type::Type{T}; misc, mcstats, parent) where T
     modname = modobj[:name]
     moddata = modobj[:data]
+    nominal = parent[:data]
+    nbins = length(nominal)
     if T == Histosys
-        T(hilo_data(moddata)...)
+        hi,lo = hilo_data(moddata)
+        T(nominal, hi, lo)
     elseif T == Normsys
         T(hilo_factor(moddata)...)
     elseif T == Staterror
         # each Staterror keepds track of which bin it should modifier
         nominalsums, sumδ2 = mcstats[modname]
-        T.(sqrt.(sumδ2) ./ nominalsums, eachindex(moddata))
+        T.(sqrt.(sumδ2) ./ nominalsums, nbins, eachindex(moddata))
     elseif T == Lumi
         paras = misc[:measurements][1][:config][:parameters]
         lumi_idx = findfirst(x->x[:name] == modname, paras)
         σ = only(paras[lumi_idx][:sigmas])
         T(σ)
     elseif T == Shapesys
-        nominal = parent[:data]
-        T.((nominal ./ moddata).^2, eachindex(moddata))
+        T.((nominal ./ moddata).^2, nbins, eachindex(moddata))
     elseif T == Shapefactor
         T.(eachindex(moddata))
     else

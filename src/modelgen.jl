@@ -1,22 +1,22 @@
 using ValueShapes
 
 """
-    struct PyHFModel
-        expected
+    struct PyHFModel{E, L}
+        expected::E
         priors
         prior_names
         prior_inits::Vector{Float64}
-        LogLikelihood
+        LogLikelihood::L
     end
 
 Struct for holding result from [build_pyhf](@ref).
 """
-struct PyHFModel
-    expected
+struct PyHFModel{E, L}
+    expected::E
     priors
     prior_names
     prior_inits::Vector{Float64}
-    LogLikelihood
+    LogLikelihood::L
 end
 
 function Base.show(io::IO, P::PyHFModel)
@@ -70,10 +70,12 @@ function build_pyhf(pyhfmodel)
 
     # intentional type-insability, avoid latency
     all_expected = []
+    all_masks = []
     all_lookup = Dict()
     for c in channels
         exp, lk = build_pyhfchannel(c, global_unique)
         push!(all_expected, exp)
+        # push!(all_masks, mk)
         merge!(all_lookup, lk)
     end
 
@@ -83,7 +85,7 @@ function build_pyhf(pyhfmodel)
     inits = Vector{Float64}(_init.(input_modifiers))
 
     total_expected = let Es = Tuple(all_expected)
-        αs -> unrolled_map(E->E(αs), Es)
+        αs -> map(E->E(αs), Es)
     end
 
     LL = pyhf_logjointof(total_expected, v_obs, priors)
@@ -104,7 +106,6 @@ function build_pyhfchannel(channel, global_unique)
     lookup = Dict(all_names .=> all_modifiers)
 
     # Special case: same name can appear multiple times with different modifier type
-    
     # if masks[1] == [1,2,4] that means the first `ExpCounts(αs[[1,2,4]])`
     masks = Tuple([findfirst(==(i), global_unique) for i in names] for names in all_v_names)
 
@@ -112,6 +113,8 @@ function build_pyhfchannel(channel, global_unique)
         αs -> internal_expected(Es, Vs, αs)
     end
     return expected, lookup
+    # @show all_expcounts[1]
+    # return all_expcounts, masks, lookup
 end
 
 """

@@ -17,7 +17,7 @@ struct Histosys{T<:AbstractInterp} <: AbstractModifier
         new{T}(interp)
     end
 end
-Histosys(up, down) = Histosys(InterpCode0(up, down))
+Histosys(nominal, up, down) = Histosys(InterpCode0(nominal, up, down))
 _prior(::Histosys) = Normal()
 _init(::Histosys) = 0.0
 
@@ -34,17 +34,11 @@ Normsys(up::Number, down::Number) = Normsys(InterpCode1(up, down))
 Normsys(nominal, ups, downs) = Normsys(InterpCode1(nominal, ups, downs))
 
 """
-    Identity function that takes two argument. Used for interpolation code that
-    doesn't do any interpolation.
-"""
-twoidentity(_, α) = α
-
-"""
 Normfactor is unconstrained, so `interp` is just identity.
 """
 struct Normfactor <: AbstractModifier # is unconstrained
-    interp::typeof(twoidentity)
-    Normfactor() = new(twoidentity)
+    interp::typeof(identity)
+    Normfactor() = new(identity)
 end
 _prior(::Normfactor) = FlatPrior(0, 5)
 _init(::Normfactor) = 1.0
@@ -55,8 +49,8 @@ this is per-bin
 """
 struct Shapefactor{T} <: AbstractModifier # is unconstrained
     interp::T
-    function Shapefactor(nthbin)
-        f = bintwoidentity(nthbin)
+    function Shapefactor(nbins, nthbin)
+        f = binidentity(nbins, nthbin)
         new{typeof(f)}(f)
     end
 end
@@ -69,8 +63,8 @@ Shapesys doesn't need interpolation, similar to `Staterror`
 struct Shapesys{T} <: AbstractModifier
     σn2::Float64
     interp::T
-    function Shapesys(σ, nthbin)
-        f = bintwoidentity(nthbin)
+    function Shapesys(σ, nbins, nthbin)
+        f = binidentity(nbins, nthbin)
         new{typeof(f)}(σ, f)
     end
 end
@@ -92,9 +86,9 @@ Distributions.logpdf(d::RelaxedPoisson, x) = _relaxedpoislogpdf(d, x*d.λ)
 _prior(S::Shapesys) = RelaxedPoisson(S.σn2)
 _init(S::Shapesys) = 1.0
 
-function bintwoidentity(nthbin)
-    (nominal, α) -> begin
-        Tuple(i == nthbin ? α : 1.0 for i = eachindex(nominal))
+function binidentity(nbins, nthbin)
+    α -> begin
+        Tuple(i == nthbin ? α : 1.0 for i = 1:nbins)
     end
 end
 
@@ -108,8 +102,8 @@ The `δ` is the absolute yield uncertainty in each bin, and the relative uncerta
 struct Staterror{T} <: AbstractModifier
     σ::Float64
     interp::T
-    function Staterror(σ, nthbin)
-        f = bintwoidentity(nthbin)
+    function Staterror(σ, nbins, nthbin)
+        f = binidentity(nbins, nthbin)
         new{typeof(f)}(σ, f)
     end
 end
@@ -123,8 +117,8 @@ the JSON file.
 """
 struct Lumi <: AbstractModifier
     σ::Float64
-    interp::typeof(twoidentity)
-    Lumi(σ) = new(σ, twoidentity)
+    interp::typeof(identity)
+    Lumi(σ) = new(σ, identity)
 end
 _prior(l::Lumi) = Normal(1, l.σ)
 _init(l::Lumi) = 1.0
@@ -145,6 +139,21 @@ struct ExpCounts{T<:Number, M}
     modifiers::M
 end
 
+# stop crazy stracktrace
+function Base.show(io::IO, ::Type{<:ExpCounts}) 
+    println(io, "ExpCounts{}")
+end
+
+function exp_mod!(modifier::Histosys, additive, factor, α)
+    additive += modifier.interp(α)
+    additive, factor
+end
+function exp_mod!(modifier, additive, factor, α)
+    factor *= modifier.interp(α)
+    additive, factor
+end
+
+
 ExpCounts(nominal::Vector{<:Number}, names::Vector{Symbol}, modifiers::AbstractVector) = ExpCounts(nominal, names, tuple(modifiers...))
 
 """
@@ -156,23 +165,15 @@ The `Unrolled.@unroll` kernel function that computs the expected counts.
     additive = float(nominal)
     factor = ones(length(additive))
     @unroll for i in 1:length(modifiers)
-        @inbounds modifier = modifiers[i]
-        @inbounds α = αs[i]
-        if modifier isa Histosys
-            # additive
-            additive += modifier.interp(nominal, α)
-        else
-            # multiplicative, staterror is per-bin
-            factor = factor .* modifier.interp(nominal, α)
-        end
+        additive, factor = exp_mod!(modifiers[i], additive, factor, αs[i])
     end
     return factor .* additive
 end
 
 function (E::ExpCounts)(αs)
-    (; modifier_names, modifiers, nominal) = E
+    (; modifiers, nominal) = E
 
-    @assert length(modifier_names) == length(αs)
+    @assert length(modifiers) == length(αs)
     return _expkernel(modifiers, nominal, αs)
 end
 
@@ -187,8 +188,4 @@ function Base.show(io::IO, E::ExpCounts)
     modifiers = E.modifiers
     elip = length(modifiers) > 5 ? "...\n" : ""
     println(io, "ExpCounts with $(length(modifiers)) modifiers:")
-    for (n, m) in zip(E.modifier_names, modifiers)
-        println(io, n=>m)
-    end
-    print(elip)
 end
