@@ -1,0 +1,62 @@
+{
+    "channels": [
+        {
+            "name": "mychannel1",
+            "samples": [
+                {
+                    "name": "signal_MC",
+                    "data": [2,3,4,5],
+                    "modifiers": [
+                        {"name": "mu", "type": "normfactor", "data": null}
+                    ]
+                },
+                {
+                    "name": "bkg_MC",
+                    "data": [30,19,9,4],
+                    "modifiers": [
+                        {   "name": "theta", 
+                            "type": "histosys", 
+                            "data": {
+                                "hi_data": [31,21,12,7], 
+                                "lo_data": [29,17,6,1]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "mychannel2",
+            "samples": [
+                {
+                    "name": "signal_MC",
+                    "data": [6,7,8],
+                    "modifiers": [
+                        {"name": "mu", "type": "normfactor", "data": null}
+                    ]
+                },
+                {
+                    "name": "bkg_MC",
+                    "data": [29,19,14],
+                    "modifiers": [
+                        {   "name": "theta2",
+                            "type": "normsys", 
+                            "data": {
+                                "hi": 1.15,
+                                "lo": 0.9
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "observations": [
+        { "name": "mychannel2", "data": [34,30,21] },
+        { "name": "mychannel1", "data": [34,22,13,11] }
+    ],
+    "measurements": [
+        { "name": "Measurement", "config": {"poi": "mu", "parameters": []} }
+    ],
+    "version": "1.0.0"
+}

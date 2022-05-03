@@ -46,54 +46,73 @@ in multiple sample / modifier.
     return expand(length(Es.parameters))
 end
 
+function find_obs_data(name, observations)
+    i = findfirst(x->x[:name] == name, observations)
+    observations[i][:data]
+end
+
 """
-    build_pyhf(load_pyhfjson(path)) 
-        -> expected::Function, priors::NamedTupleDist, priornames::Tuple{Symbol}
+    build_pyhf(load_pyhfjson(path)) -> PyHFModel
 
 the `expected(αs)` is a function that takes vector or tuple of length `N`, where `N` is also the
-length of `priors` and `priornames`. In other words, the three objects returned
+length of `priors` and `priornames`. In other words, these three fields of the returned object
 are aligned.
 
-The output of `forward_model()` is always a vector of length `N`, represending the expected
-bin counts when all parameters (`αs`) taking a set of specific values.
 
+!!! note
+    The bins from different channels are automatically concatenated.
 """
 function build_pyhf(pyhfmodel)
-    #### all_* are before de-duplicating
-    all_expcounts = Tuple(
-                      sample[2]
-                      for (name, channel) in pyhfmodel for sample in channel if name!="misc"
-                     )
-    all_v_names = Any[E.modifier_names for E in all_expcounts]
-    all_names = reduce(vcat, all_v_names)
-    all_modifiers = []
-    counts = Int[]
-    for E in all_expcounts
-        append!(all_modifiers, E.modifiers)
-        push!(counts, length(E.modifiers))
+    channels = [name => channel for (name, channel) in pyhfmodel if name != "misc"]
+    v_obs = [find_obs_data(name, pyhfmodel["misc"][:observations]) for (name, _) in channels]
+    obs = reduce(vcat, v_obs) #concat channels together
+    global_unique = reduce(vcat, [sample[2].modifier_names for (name, C) in channels for sample in C]) |>
+    unique
+
+    # intentional type-insability, avoid latency
+    all_expected = []
+    all_lookup = Dict()
+    for c in channels
+        exp, lk = build_pyhfchannel(c, global_unique)
+        push!(all_expected, exp)
+        merge!(all_lookup, lk)
     end
-    lookup = Dict(all_names .=> all_modifiers)
-    unique_names = unique(all_names)
-    input_modifiers = [lookup[k] for k in unique_names]
-    priornames = Tuple(Symbol.(unique_names))
+
+    input_modifiers = [all_lookup[k] for k in global_unique]
+    priornames = Tuple(Symbol.(global_unique))
     priors = NamedTupleDist(NamedTuple{priornames}(_prior.(input_modifiers)))
     inits = Vector{Float64}(_init.(input_modifiers))
-    obs = pyhfmodel["misc"][:observations][1][:data]
+
+    total_expected = let Es = Tuple(all_expected)
+        αs -> reduce(vcat, E(αs) for E in Es)
+    end
+
+    LL = pyhf_loglikelihoodof(total_expected, obs, priors)
+    return PyHFModel(total_expected, priors, priornames, inits, LL)
+end
+
+function build_pyhfchannel(channel, global_unique)
+    #### this is within the channel, we use `global_unique` vector to align back
+    name, samples = channel
+    all_expcounts = Tuple(sample[2] for sample in samples)
+    all_v_names = Any[E.modifier_names for E in all_expcounts]
+    all_names = reduce(vcat, all_v_names)
+    channel_unique = unique(all_names)
+    all_modifiers = []
+    for E in all_expcounts
+        append!(all_modifiers, E.modifiers)
+    end
+    lookup = Dict(all_names .=> all_modifiers)
 
     # Special case: same name can appear multiple times with different modifier type
     
     # if masks[1] == [1,2,4] that means the first `ExpCounts(αs[[1,2,4]])`
-    masks = Tuple([findfirst(==(i), unique_names) for i in names] for names in all_v_names)
-    # each mask should have enough parameter to feed the ExpCount
-    @assert all(length.(masks) .== counts)
+    masks = Tuple([findfirst(==(i), global_unique) for i in names] for names in all_v_names)
 
     expected = let Es = all_expcounts, Vs = masks
-    αs -> internal_expected(Es, Vs, αs)
+        αs -> internal_expected(Es, Vs, αs)
     end
-
-    LL = pyhf_loglikelihoodof(expected, obs, priors)
-
-    return PyHFModel(expected, priors, priornames, inits, LL)
+    return expected, lookup
 end
 
 """

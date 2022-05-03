@@ -15,4 +15,6 @@ end
     # Write your tests here.
     @test isapprox(testload(joinpath(@__DIR__, "./pyhfjson/single_channel_big.json")), 80.67893633848638;
                   rtol=0.0001)
+    @test isapprox(testload(joinpath(@__DIR__, "./pyhfjson/multi_channel.json")), 39.02800819146104;
+                  rtol=0.0001)
 end
