@@ -16,6 +16,7 @@ ValueShapes = "136a8f8c-c49b-4edb-8b98-f3d64d48be8f"
 [compat]
 Distributions = "0.25"
 JSON3 = "1"
+LogExpFunctions = "0.3"
 SpecialFunctions = "2"
 StaticArrays = "1"
 Unrolled = "0.1"
