@@ -12,7 +12,7 @@ const _modifier_dict = Dict(
 
 
 function hilo_data(jobj)
-    jobj[:hi_data], jobj[:lo_data]
+    promote(collect(jobj[:hi_data]), collect(jobj[:lo_data]))
 end
 function hilo_factor(jobj)
     jobj[:hi], jobj[:lo]
@@ -74,7 +74,7 @@ function build_sample(jobj, names=Symbol[]; misc, mcstats)
     modifiers = build_modifier!.(jobj[:modifiers], Ref(names); misc, mcstats, parent=jobj)
     modifiers = any(x->x <: Vector, typeof.(modifiers)) ? reduce(vcat, modifiers) : modifiers #flatten it
     @assert length(names) == length(modifiers)
-    ExpCounts(jobj[:data], names, modifiers)
+    ExpCounts(collect(jobj[:data]), names, modifiers)
 end
 
 """

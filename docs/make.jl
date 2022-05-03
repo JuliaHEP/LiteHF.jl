@@ -5,6 +5,10 @@ makedocs(
     sitename = "LiteHF",
     format = Documenter.HTML(),
     modules = [LiteHF]
+    pages=[
+        "APIs" => "index.md",
+        "Tips & Recommendations" => "tips.md",
+    ],
 )
 
 deploydocs(;

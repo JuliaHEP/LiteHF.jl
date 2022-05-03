@@ -17,7 +17,7 @@ Base.maximum(d::FlatPrior) = d.b
 Distributions.logpdf(d::FlatPrior, x::Real) = zero(x)
 Base.rand(rng::Random.AbstractRNG, d::FlatPrior) = rand(rng, Uniform(d.a, d.b))
 
-export pyhf_loglikelihoodof
+export pyhf_loglikelihoodof, pyhf_logpriorof, pyhf_logjointof
 
 # interpolations
 # export InterpCode0, InterpCode1, InterpCode2, InterpCode4

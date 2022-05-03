@@ -139,13 +139,13 @@ _init(l::Lumi) = 1.0
 A callable struct that returns the expected count given modifier nuisance parameter values.
 The # of parameters passed must equal to length of `modifiers`. See [_expkernel](@ref)
 """
-struct ExpCounts{T, M}
-    nominal::T
+struct ExpCounts{T<:Number, M}
+    nominal::Vector{T}
     modifier_names::Vector{Symbol}
     modifiers::M
 end
 
-ExpCounts(nominal, names::Vector{Symbol}, modifiers::AbstractVector) = ExpCounts(nominal, names, tuple(modifiers...))
+ExpCounts(nominal::Vector{<:Number}, names::Vector{Symbol}, modifiers::AbstractVector) = ExpCounts(nominal, names, tuple(modifiers...))
 
 """
     _expkernel(modifiers, nominal, αs)

@@ -60,12 +60,11 @@ are aligned.
 
 
 !!! note
-    The bins from different channels are automatically concatenated.
+    The bins from different channels are put into a `NTuple{Nbins, Vector}`.
 """
 function build_pyhf(pyhfmodel)
     channels = [name => channel for (name, channel) in pyhfmodel if name != "misc"]
-    v_obs = [find_obs_data(name, pyhfmodel["misc"][:observations]) for (name, _) in channels]
-    obs = reduce(vcat, v_obs) #concat channels together
+    v_obs = Tuple(find_obs_data(name, pyhfmodel["misc"][:observations]) for (name, _) in channels)
     global_unique = reduce(vcat, [sample[2].modifier_names for (name, C) in channels for sample in C]) |>
     unique
 
@@ -84,10 +83,10 @@ function build_pyhf(pyhfmodel)
     inits = Vector{Float64}(_init.(input_modifiers))
 
     total_expected = let Es = Tuple(all_expected)
-        αs -> reduce(vcat, E(αs) for E in Es)
+        αs -> unrolled_map(E->E(αs), Es)
     end
 
-    LL = pyhf_loglikelihoodof(total_expected, obs, priors)
+    LL = pyhf_logjointof(total_expected, v_obs, priors)
     return PyHFModel(total_expected, priors, priornames, inits, LL)
 end
 
@@ -121,18 +120,17 @@ end
 Return a callable Function that would calculate the log likelihood
 
 !!! note
-    The "constraint" terms that come from prior is NOT included here.
+    The so called "constraint" terms (from priors) are NOT included here.
 """
 function pyhf_loglikelihoodof(expected, obs)
     f(x, o) = logpdf(Poisson(x), o)
-    L = let data = obs
-        αs -> begin 
-            expe = expected(αs)
-            any(<(0), expe) && return -Inf
-            measurement = mapreduce(f, + , expe, obs)
+    mes(E, O) = mapreduce(f, + , E, O)
+    L = function (αs)
+        expe = expected(αs)
+        unrolled_any(E->any(<(0), E), expe) && return -Inf
+        measurement = unrolled_reduce(+, 0.0, unrolled_map(mes, expe, obs))
 
-            return measurement
-        end
+        return measurement
     end
     return L
 end
@@ -145,24 +143,40 @@ end
 end
 
 """
-    pyhf_loglikelihoodof(expected, obs, priors)
+    pyhf_logpriorof(priors)
 
 Return a callable Function that would calculate the log likelihood
-`FlatPrior` prior shouldn't have contribution to constraint
+for the priors.
 
 !!! note
-    The "constraint" terms that come from prior IS included here.
+    Sometimes these are called the "constraint" terms.
 """
-function pyhf_loglikelihoodof(expected, obs, priors)
-    f(x, o) = logpdf(Poisson(x), o)
-    L = let data = obs, pris = values(priors)
-        αs -> begin
-            expe = expected(αs)
-            any(<(0), expe) && return -Inf
-            measurement = mapreduce(f, +, expe, obs)
-            constraint = internal_constrainteval(pris, αs)
-            return measurement + constraint
-        end
+function pyhf_logpriorof(priors)
+    pris = values(priors)
+    L = function (αs)
+        constraint = internal_constrainteval(pris, αs)
+        return constraint
+    end
+    return L
+end
+
+
+"""
+    pyhf_logjointof(expected, obs, priors)
+
+Return a callable Function that would calculate the joint log likelihood
+of likelihood and priors.
+
+Equivalent of adding `loglikelihood` and `logprior` together.
+
+!!! note
+    The "constraint" terms are included here.
+"""
+function pyhf_logjointof(expected, obs, priors)
+    L1 = pyhf_loglikelihoodof(expected, obs)
+    L2 = pyhf_logpriorof(priors)
+    L = function (αs)
+        L1(αs) + L2(αs)
     end
     return L
 end
