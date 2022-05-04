@@ -34,8 +34,8 @@ struct InterpCode1 <: AbstractInterp
 end
 
 function InterpCode1(I0, I_up::T, I_down::T) where {T<:AbstractVector}
-    f_up = first(I_up / I0)
-    f_down = first(I_down / I0)
+    f_up = first(I_up ./ I0)
+    f_down = first(I_down ./ I0)
     InterpCode1(f_up, f_down)
 end
 
@@ -56,7 +56,7 @@ end
 
 function (i::InterpCode2)(α)
     (; a, b) = i
-    if α >= 1
+    if α > 1
         @. (b + 2*a) * (α - 1)
     elseif α >= -1
         @. a * α^2 + b * α
@@ -73,21 +73,21 @@ Callable struct for interpolation for additive modifier.
 Code4 is the exponential + 6-order polynomial interpolation.
 """
 struct InterpCode4{T<:AbstractVector, N<:Number} <: AbstractInterp
-    I_up::T
-    I_down::T
+    f_ups::T
+    f_downs::T
     α0::N
     inver::Matrix{Float64}
 end
 
-function InterpCode4(I_0, I_up, I_down; α0=1)
+function InterpCode4(I0, I_up, I_down; α0=1)
     inver = _interp4_inverse(α0)
-    InterpCode4(I_up/I0, I_down/I0, α0, inver)
+    InterpCode4(I_up ./ I0, I_down ./ I0, α0, inver)
 end
 
 function (i::InterpCode4)(α)
-    (; I_up, I_down, inver, α0) = i
-    delta_up = I_up
-    delta_down = I_down
+    (; f_ups, f_downs, inver, α0) = i
+    delta_up = f_ups
+    delta_down = f_downs
     mult = if α >= α0
         @. (delta_up) ^ α
     elseif α <= -α0
@@ -106,7 +106,7 @@ function (i::InterpCode4)(α)
         coefficients = inver * b
         1 .+ sum(coefficients[i] * α^i for i=1:6)
     end
-    @. mult - 1
+    mult
 end
 
 function _interp4_inverse(α0)

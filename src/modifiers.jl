@@ -13,7 +13,7 @@ in `hi_data` and `lo_data`
 struct Histosys{T<:AbstractInterp} <: AbstractModifier
     interp::T
     function Histosys(interp::T) where T
-        @assert T <: Union{InterpCode0, InterpCode4}
+        @assert T <: Union{InterpCode0, InterpCode2, InterpCode4}
         new{T}(interp)
     end
 end
@@ -139,13 +139,14 @@ function Base.show(io::IO, ::Type{<:ExpCounts})
     println(io, "ExpCounts{}")
 end
 
-function exp_mod!(modifier::Histosys, additive, factor, α)
-    additive .+= modifier.interp(α)
-    nothing
+function exp_mod!(interp::InterpCode0, additive, factor, α)
+    additive .+= interp(α)
 end
-function exp_mod!(modifier, additive, factor, α)
-    factor .*= modifier.interp(α)
-    nothing
+function exp_mod!(interp::InterpCode2, additive, factor, α)
+    additive .+= interp(α)
+end
+function exp_mod!(interp, additive, factor, α)
+    factor .*= interp(α)
 end
 
 
@@ -161,7 +162,7 @@ The `Unrolled.@unroll` kernel function that computs the expected counts.
     additive = T.(nominal)
     factor = ones(T, length(additive))
     @unroll for i in 1:length(modifiers)
-        @inbounds exp_mod!(modifiers[i], additive, factor, αs[i])
+        @inbounds exp_mod!(modifiers[i].interp, additive, factor, αs[i])
     end
     return factor .* additive
 end

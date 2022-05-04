@@ -123,7 +123,7 @@ function pyhf_loglikelihoodof(expected, obs)
     L = function (αs)
         T = eltype(αs)
         expe = expected(αs)
-        any(E->any(<(0), E), expe) && return T(-Inf)
+        any(E->any(!isfinite, E), expe) && return T(-Inf)
         mes_LL = zero(T)
         @inbounds for i in eachindex(expe) # loop over channels
             E = expe[i]
