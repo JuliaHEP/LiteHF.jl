@@ -5,7 +5,7 @@ function testload(path)
     pydict = load_pyhfjson(path)
     pyhfmodel = build_pyhf(pydict)
     res = maximize(pyhfmodel.LogLikelihood, pyhfmodel.prior_inits,
-                   NelderMead(), Optim.Options(g_tol=1e-5);)
+                   BFGS(), Optim.Options(g_tol=1e-5); autodiff=:forward)
     best_paras = Optim.maximizer(res)
     Dict(pyhfmodel.prior_names .=> best_paras)
     twice_nll = -2*pyhfmodel.LogLikelihood(best_paras)
