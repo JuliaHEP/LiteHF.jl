@@ -147,12 +147,12 @@ function Base.show(io::IO, ::Type{<:ExpCounts})
 end
 
 function exp_mod!(modifier::Histosys, additive, factor, α)
-    additive += modifier.interp(α)
-    additive, factor
+    additive .+= modifier.interp(α)
+    nothing
 end
 function exp_mod!(modifier, additive, factor, α)
-    factor = factor .* modifier.interp(α)
-    additive, factor
+    factor .*= modifier.interp(α)
+    nothing
 end
 
 
@@ -164,10 +164,11 @@ ExpCounts(nominal::Vector{<:Number}, names::Vector{Symbol}, modifiers::AbstractV
 The `Unrolled.@unroll` kernel function that computs the expected counts.
 """
 @unroll function _expkernel(modifiers, nominal, αs)
-    additive = float(nominal)
-    factor = ones(length(additive))
+    T = eltype(αs)
+    additive = T.(nominal)
+    factor = ones(T, length(additive))
     @unroll for i in 1:length(modifiers)
-        @inbounds additive, factor = exp_mod!(modifiers[i], additive, factor, αs[i])
+        @inbounds exp_mod!(modifiers[i], additive, factor, αs[i])
     end
     return factor .* additive
 end
