@@ -1,0 +1,47 @@
+{
+    "channels": [
+        {
+            "name": "mychannel",
+            "samples": [
+                {
+                    "name": "signal_MC",
+                    "data": [3, 2],
+                    "modifiers": [
+                        {"name": "mu", "type": "normfactor", "data": null}
+                    ]
+                },
+                {
+                    "name": "bkg_MC",
+                    "data": [8, 6],
+                    "modifiers": [
+                        {   "name": "MCstat", 
+                            "type": "staterror", 
+                            "data": [2, 3]
+                        }
+                    ]
+                },
+                {
+                    "name": "bkg_MC2",
+                    "data": [12, 7],
+                    "modifiers": [
+                        {   "name": "MCstat", 
+                            "type": "staterror", 
+                            "data": [3, 1]
+                        },
+                        {   "name": "shape2", 
+                            "type": "shapesys", 
+                            "data": [3.4, 1.2]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "observations": [
+        { "name": "mychannel", "data": [22, 15] }
+    ],
+    "measurements": [
+        { "name": "Measurement", "config": {"poi": "mu", "parameters": []} }
+    ],
+    "version": "1.0.0"
+}

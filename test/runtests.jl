@@ -59,13 +59,12 @@ using Test
     end
 end
 
-function testload(path)
+function testload(path, OPT = BFGS())
     pydict = load_pyhfjson(path)
     pyhfmodel = build_pyhf(pydict)
     res = maximize(pyhfmodel.LogLikelihood, pyhfmodel.prior_inits,
-                   BFGS(), Optim.Options(g_tol=1e-5); autodiff=:forward)
+                   OPT, Optim.Options(g_tol=1e-5); autodiff=:forward)
     best_paras = Optim.maximizer(res)
-    Dict(pyhfmodel.prior_names .=> best_paras)
     twice_nll = -2*pyhfmodel.LogLikelihood(best_paras)
 end
 
@@ -75,4 +74,6 @@ end
                    rtol=0.0001)
     @test isapprox(testload(joinpath(@__DIR__, "./pyhfjson/multi_channel.json")), 39.02800819146104;
                    rtol=0.0001)
+    # _logabsgamma doesn't have DiffRule right now
+    @test testload(joinpath(@__DIR__, "./pyhfjson/sample_staterror_shapesys.json"), NelderMead()) < 16.66838236805484
 end
