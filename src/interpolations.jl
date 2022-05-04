@@ -18,7 +18,7 @@ function InterpCode0(I0, I_up::T, I_down::T) where {T<:AbstractVector}
 end
 
 function (i::InterpCode0)(α)
-    vs = ifelse(α >= zero(α), i.Δ_up, i.Δ_down)
+    vs = Base.ifelse(α >= zero(α), i.Δ_up, i.Δ_down)
     return vs*α
 end
 
@@ -40,7 +40,7 @@ function InterpCode1(I0, I_up::T, I_down::T) where {T<:AbstractVector}
 end
 
 function (i::InterpCode1)(α)
-    ifelse(α >= zero(α), (i.f_up)^α, (i.f_down)^(-α))
+    Base.ifelse(α >= zero(α), (i.f_up)^α, (i.f_down)^(-α))
 end
 
 struct InterpCode2{T} <: AbstractInterp
@@ -132,7 +132,7 @@ struct BinFactor{T}<:AbstractVector{T}
     α::T
 end
 Base.length(b::BinFactor) = b.nbins
-Base.getindex(b::BinFactor{T}, n::Integer) where T = ifelse(n==b.nthbin, b.α, zero(T))
+Base.getindex(b::BinFactor{T}, n::Integer) where T = Base.ifelse(n==b.nthbin, b.α, zero(T))
 Base.size(b::BinFactor) = (b.nbins, )
 
 """
@@ -140,22 +140,18 @@ Base.size(b::BinFactor) = (b.nbins, )
 
 A functional that used to track per-bin systematics. Returns the closure function over `nbins, nthbin`:
 ```julia
-    function (α::T) where T
-        BinFactor(nbins, nthbin, α)
-    end
+    α -> BinFactor(nbins, nthbin, α)
 ```
 """
 function binidentity(nbins, nthbin)
-    function (α::T) where T
-        BinFactor(nbins, nthbin, α)
-    end
+    α -> BinFactor(nbins, nthbin, α)
 end
 
 """
     Pseudo flat prior in the sense that `logpdf()` always evaluates to zero,
     but `rand()`, `minimum()`, and `maximum()` behaves like `Uniform(a, b)`.
 """
-struct FlatPrior{T} <: ContinuousUnivariateDistribution
+struct FlatPrior{T} <: Distributions.ContinuousUnivariateDistribution
     a::T
     b::T
 end

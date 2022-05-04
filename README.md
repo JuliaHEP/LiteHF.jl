@@ -26,7 +26,7 @@ using LiteHF, Turing, Optim
 dict = load_pyhfjson("./test/sample.json");
 
 const pyhfmodel = build_pyhf(dict);
-# unpack `ValueShapes` into just an array of prior distributions
+# unpack `NamedTuple` into just an array of prior distributions
 const priors_array = collect(values(pyhfmodel.priors))
 
 @model function mymodel(observed)

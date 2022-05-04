@@ -1,5 +1,3 @@
-using ValueShapes
-
 """
     struct PyHFModel{E, L}
         expected::E
@@ -79,7 +77,7 @@ function build_pyhf(pyhfmodel)
 
     input_modifiers = [all_lookup[k] for k in global_unique]
     priornames = Tuple(Symbol.(global_unique))
-    priors = NamedTupleDist(NamedTuple{priornames}(_prior.(input_modifiers)))
+    priors = NamedTuple{priornames}(_prior.(input_modifiers))
     inits = Vector{Float64}(_init.(input_modifiers))
 
     total_expected = let Es = Tuple(all_expected)

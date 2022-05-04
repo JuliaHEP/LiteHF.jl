@@ -78,7 +78,7 @@ Poisson with `logpdf` continuous in `k`. Essentially by replacing denominator wi
     The `Distributions.logpdf` has been redefined to be `logpdf(d::RelaxedPoisson, x) = logpdf(d, x*d.λ)`.
     This is to reproduce the Poisson constraint term in `pyhf`, which is a hack introduced for Asimov dataset.
 """
-struct RelaxedPoisson{T} <: ContinuousUnivariateDistribution
+struct RelaxedPoisson{T} <: Distributions.ContinuousUnivariateDistribution
     λ::T
 end
 _relaxedpoislogpdf(d::RelaxedPoisson, x) = xlogy(x, d.λ) - d.λ - logabsgamma(x + 1.0)[1]
