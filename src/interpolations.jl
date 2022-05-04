@@ -18,7 +18,7 @@ function InterpCode0(I0, I_up::T, I_down::T) where {T<:AbstractVector}
 end
 
 function (i::InterpCode0)(α)
-    vs = ifelse(α >= 0, i.Δ_up, i.Δ_down)
+    vs = ifelse(α >= zero(α), i.Δ_up, i.Δ_down)
     return vs*α
 end
 
@@ -40,11 +40,7 @@ function InterpCode1(I0, I_up::T, I_down::T) where {T<:AbstractVector}
 end
 
 function (i::InterpCode1)(α)
-    if α >= 0
-        (i.f_up)^α
-    else
-        (i.f_down)^(-α)
-    end
+    ifelse(α >= zero(α), (i.f_up)^α, (i.f_down)^(-α))
 end
 
 struct InterpCode2{T} <: AbstractInterp
@@ -122,3 +118,49 @@ function _interp4_inverse(α0)
      3/(16*alpha0^5) -3/(16*alpha0^5) -3/(16*alpha0^4) -3/(16*alpha0^4) 1/(16*alpha0^3)  -1/(16*alpha0^3)
      1/(2*alpha0^6)  1/(2*alpha0^6)   -5/(16*alpha0^5) 5/(16*alpha0^5)  1/(16*alpha0^4)  1/(16*alpha0^4) ]
 end
+
+
+"""
+    BinFactor{T} <: AbstractVector{T}
+
+Internal type used to avoid allocation for per-bin systematics. It behaves as a vector with length `nbins` and 
+only has value `α` on `nthbin`-th index. See also [binidentity](@ref).
+"""
+struct BinFactor{T}<:AbstractVector{T}
+    nbins::Int
+    nthbin::Int
+    α::T
+end
+Base.length(b::BinFactor) = b.nbins
+Base.getindex(b::BinFactor{T}, n::Integer) where T = ifelse(n==b.nthbin, b.α, zero(T))
+Base.size(b::BinFactor) = (b.nbins, )
+
+"""
+    binidentity(nbins, nthbin)
+
+A functional that used to track per-bin systematics. Returns the closure function over `nbins, nthbin`:
+```julia
+    function (α::T) where T
+        BinFactor(nbins, nthbin, α)
+    end
+```
+"""
+function binidentity(nbins, nthbin)
+    function (α::T) where T
+        BinFactor(nbins, nthbin, α)
+    end
+end
+
+"""
+    Pseudo flat prior in the sense that `logpdf()` always evaluates to zero,
+    but `rand()`, `minimum()`, and `maximum()` behaves like `Uniform(a, b)`.
+"""
+struct FlatPrior{T} <: ContinuousUnivariateDistribution
+    a::T
+    b::T
+end
+
+Base.minimum(d::FlatPrior) = d.a
+Base.maximum(d::FlatPrior) = d.b
+Distributions.logpdf(d::FlatPrior, x::Real) = zero(x)
+Base.rand(rng::Random.AbstractRNG, d::FlatPrior) = rand(rng, Uniform(d.a, d.b))

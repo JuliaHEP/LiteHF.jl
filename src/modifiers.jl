@@ -86,13 +86,6 @@ Distributions.logpdf(d::RelaxedPoisson, x) = _relaxedpoislogpdf(d, x*d.λ)
 _prior(S::Shapesys) = RelaxedPoisson(S.σn2)
 _init(S::Shapesys) = 1.0
 
-function binidentity(nbins, nthbin)
-    function (α::T) where T
-        res = zeros(T, nbins)
-        res[nthbin] = α
-        res
-    end
-end
 
 """
 Staterror doesn't need interpolation, but it's a per-bin modifier.

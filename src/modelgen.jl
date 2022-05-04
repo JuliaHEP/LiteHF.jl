@@ -107,29 +107,35 @@ function build_pyhfchannel(channel, global_unique)
     # if masks[1] == [1,2,4] that means the first `ExpCounts(αs[[1,2,4]])`
     masks = Tuple([findfirst(==(i), global_unique) for i in names] for names in all_v_names)
 
-    expected = let Es = all_expcounts, Vs = masks
-        αs -> internal_expected(Es, Vs, αs)
-    end
+    expected = αs -> internal_expected(all_expcounts, masks, αs)
     return expected, lookup
 end
 
 """
     pyhf_loglikelihoodof(expected, obs)
 
-Return a callable Function that would calculate the log likelihood
+Return a callable Function `L(αs)` that would calculate the log likelihood. `expected` is a callable of
+`αs` as well.
 
 !!! note
     The so called "constraint" terms (from priors) are NOT included here.
 """
 function pyhf_loglikelihoodof(expected, obs)
     f(x, o) = logpdf(Poisson(x), o)
-    mes(E, O) = mapreduce(f, + , E, O)
     L = function (αs)
+        T = eltype(αs)
         expe = expected(αs)
-        unrolled_any(E->any(<(0), E), expe) && return -Inf
-        measurement = unrolled_reduce(+, 0.0, unrolled_map(mes, expe, obs))
+        any(E->any(<(0), E), expe) && return T(-Inf)
+        mes_LL = zero(T)
+        @inbounds for i in eachindex(expe) # loop over channels
+            E = expe[i]
+            O = obs[i]
+            @inbounds for j in eachindex(E) # loop over bins
+                mes_LL += f(E[j], O[j])
+            end
+        end
 
-        return measurement
+        return mes_LL
     end
     return L
 end
@@ -144,7 +150,7 @@ end
 """
     pyhf_logpriorof(priors)
 
-Return a callable Function that would calculate the log likelihood
+Return a callable Function `L(αs)` that would calculate the log likelihood
 for the priors.
 
 !!! note
@@ -152,11 +158,7 @@ for the priors.
 """
 function pyhf_logpriorof(priors)
     pris = values(priors)
-    L = function (αs)
-        constraint = internal_constrainteval(pris, αs)
-        return constraint
-    end
-    return L
+    αs -> internal_constrainteval(pris, αs)
 end
 
 
@@ -174,8 +176,5 @@ Equivalent of adding `loglikelihood` and `logprior` together.
 function pyhf_logjointof(expected, obs, priors)
     L1 = pyhf_loglikelihoodof(expected, obs)
     L2 = pyhf_logpriorof(priors)
-    L = function (αs)
-        L1(αs) + L2(αs)
-    end
-    return L
+    return αs -> L1(αs) + L2(αs)
 end

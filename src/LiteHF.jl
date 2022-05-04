@@ -3,20 +3,6 @@ module LiteHF
 using Distributions
 import Random
 
-"""
-    Pseudo flat prior in the sense that `logpdf()` always evaluates to zero,
-    but `rand()`, `minimum()`, and `maximum()` behaves like `Uniform(a, b)`.
-"""
-struct FlatPrior{T} <: ContinuousUnivariateDistribution
-    a::T
-    b::T
-end
-
-Base.minimum(d::FlatPrior) = d.a
-Base.maximum(d::FlatPrior) = d.b
-Distributions.logpdf(d::FlatPrior, x::Real) = zero(x)
-Base.rand(rng::Random.AbstractRNG, d::FlatPrior) = rand(rng, Uniform(d.a, d.b))
-
 export pyhf_loglikelihoodof, pyhf_logpriorof, pyhf_logjointof
 
 # interpolations
