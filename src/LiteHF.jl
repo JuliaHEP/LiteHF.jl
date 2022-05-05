@@ -1,7 +1,7 @@
 module LiteHF
 
 using Distributions
-import Random
+import Random, Optim
 
 export pyhf_loglikelihoodof, pyhf_logpriorof, pyhf_logjointof
 
@@ -21,6 +21,7 @@ include("./interpolations.jl")
 include("./modifiers.jl")
 include("./pyhfparser.jl")
 include("./modelgen.jl")
+include("./teststatistics.jl")
 
 function _precompile_()
     ccall(:jl_generating_output, Cint, ()) == 1 || return nothing

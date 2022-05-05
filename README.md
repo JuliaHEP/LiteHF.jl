@@ -3,6 +3,11 @@
 [![Build Status](https://github.com/JuliaHEP/LiteHF.jl/workflows/CI/badge.svg)](https://github.com/JuliaHEP/LiteHF.jl/actions)
 [![Codecov](https://codecov.io/gh/JuliaHEP/LiteHF.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaHEP/LiteHF.jl)
 
+
+## TODO
+- [ ] Implement teststatistics helper functions
+- [ ] Re-structre the `PyHFModel` such that the `POI` component can be swapped out.
+
 ## Load `pyhf` JSON:
 ```julia
 using LiteHF, Optim
