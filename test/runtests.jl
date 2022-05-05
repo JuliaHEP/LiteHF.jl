@@ -59,21 +59,31 @@ using Test
     end
 end
 
-function testload(path, OPT = BFGS())
+function loadmodel(path)
     pydict = load_pyhfjson(path)
     pyhfmodel = build_pyhf(pydict)
+end
+
+testmodel(path::String, OPT = BFGS()) = testmodel(loadmodel(path), OPT)
+function testmodel(pyhfmodel, OPT = BFGS())
     res = maximize(pyhfmodel.LogLikelihood, pyhfmodel.prior_inits,
                    OPT, Optim.Options(g_tol=1e-5); autodiff=:forward)
     best_paras = Optim.maximizer(res)
     twice_nll = -2*pyhfmodel.LogLikelihood(best_paras)
 end
 
+stateerror_shape = loadmodel(joinpath(@__DIR__, "./pyhfjson/sample_staterror_shapesys.json"))
+@testset "Basic expected tests" begin
+    R = stateerror_shape
+    @test R.expected(ones(5))[1] == [23.0, 15.0]
+    @test R.expected(R.prior_inits)[1] == [23.0, 15.0]
+    @test R.expected([0.81356312, 0.99389009, 1.01090199, 0.99097032, 1.00290362])[1] ≈
+    [22.210797046385544, 14.789399036653428]
+end
+
 @testset "Full model" begin
-    # Write your tests here.
-    @test isapprox(testload(joinpath(@__DIR__, "./pyhfjson/single_channel_big.json")), 80.67893633848638;
-                   rtol=0.0001)
-    @test isapprox(testload(joinpath(@__DIR__, "./pyhfjson/multi_channel.json")), 39.02800819146104;
-                   rtol=0.0001)
+    @test testmodel(joinpath(@__DIR__, "./pyhfjson/single_channel_big.json")) ≈ 80.67893633848638 rtol=0.0001
+    @test testmodel(joinpath(@__DIR__, "./pyhfjson/multi_channel.json")) ≈ 39.02800819146104 rtol=0.0001
     # _logabsgamma doesn't have DiffRule right now
-    @test testload(joinpath(@__DIR__, "./pyhfjson/sample_staterror_shapesys.json"), NelderMead()) < 16.66838236805484
+    @test testmodel(stateerror_shape, NelderMead()) ≈ 16.66838236805484 rtol = 0.0001
 end

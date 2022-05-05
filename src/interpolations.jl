@@ -121,30 +121,30 @@ end
 
 
 """
-    BinFactor{T} <: AbstractVector{T}
+    MultOneHot{T} <: AbstractVector{T}
 
-Internal type used to avoid allocation for per-bin systematics. It behaves as a vector with length `nbins` and 
-only has value `α` on `nthbin`-th index. See also [binidentity](@ref).
+Internal type used to avoid allocation for per-bin multiplicative systematics. It behaves as a vector with length `nbins` and 
+only has value `α` on `nthbin`-th index, the rest being `one(T)`. See also [binidentity](@ref).
 """
-struct BinFactor{T}<:AbstractVector{T}
+struct MultOneHot{T}<:AbstractVector{T}
     nbins::Int
     nthbin::Int
     α::T
 end
-Base.length(b::BinFactor) = b.nbins
-Base.getindex(b::BinFactor{T}, n::Integer) where T = Base.ifelse(n==b.nthbin, b.α, zero(T))
-Base.size(b::BinFactor) = (b.nbins, )
+Base.length(b::MultOneHot) = b.nbins
+Base.getindex(b::MultOneHot{T}, n::Integer) where T = Base.ifelse(n==b.nthbin, b.α, one(T))
+Base.size(b::MultOneHot) = (b.nbins, )
 
 """
     binidentity(nbins, nthbin)
 
 A functional that used to track per-bin systematics. Returns the closure function over `nbins, nthbin`:
 ```julia
-    α -> BinFactor(nbins, nthbin, α)
+    α -> MultOneHot(nbins, nthbin, α)
 ```
 """
 function binidentity(nbins, nthbin)
-    α -> BinFactor(nbins, nthbin, α)
+    α -> MultOneHot(nbins, nthbin, α)
 end
 
 """

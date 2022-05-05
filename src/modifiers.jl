@@ -63,9 +63,9 @@ Shapesys doesn't need interpolation, similar to `Staterror`
 struct Shapesys{T} <: AbstractModifier
     σn2::Float64
     interp::T
-    function Shapesys(σ, nbins, nthbin)
+    function Shapesys(σneg2, nbins, nthbin)
         f = binidentity(nbins, nthbin)
-        new{typeof(f)}(σ, f)
+        new{typeof(f)}(σneg2, f)
     end
 end
 
@@ -81,8 +81,9 @@ Poisson with `logpdf` continuous in `k`. Essentially by replacing denominator wi
 struct RelaxedPoisson{T} <: Distributions.ContinuousUnivariateDistribution
     λ::T
 end
-_relaxedpoislogpdf(d::RelaxedPoisson, x) = xlogy(x, d.λ) - d.λ - logabsgamma(x + 1.0)[1]
-Distributions.logpdf(d::RelaxedPoisson, x) = _relaxedpoislogpdf(d, x*d.λ)
+# https://github.com/scikit-hep/pyhf/blob/ce7057417ee8c4e845df8302c7375301901d2b7d/src/pyhf/tensor/numpy_backend.py#L390
+_relaxedpoislogpdf(λ, x) = xlogy(x, λ) - λ - logabsgamma(x + 1.0)[1]
+Distributions.logpdf(d::RelaxedPoisson, x) = _relaxedpoislogpdf(d.λ*x, d.λ)
 _prior(S::Shapesys) = RelaxedPoisson(S.σn2)
 _init(S::Shapesys) = 1.0
 
