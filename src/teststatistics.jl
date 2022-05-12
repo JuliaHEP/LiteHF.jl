@@ -2,6 +2,25 @@ function opt_maximize(f, inits; alg = Optim.NelderMead())
     Optim.maximize(f, inits, alg, Optim.Options(g_tol = 1e-5, iterations=10^4); autodiff=:forward)
 end
 
+abstract type AbstractTestStatistics <: Distributions.ContinuousUnivariateDistribution end
+const ATS = AbstractTestStatistics
+
+struct TS_t0 <: ATS end
+struct TS_tmu <: ATS end
+struct TS_tmutilde <: ATS end
+struct TS_q0 <: ATS end
+struct TS_qmu <: ATS end
+struct TS_qmutilde <: ATS end
+
+teststatistics(T::ATS) = error("Not implemented $T.")
+
+function teststatistics(model, poi_test, ::TS_qmu)
+    A_data, A_mubhathat = asimov_data(model, poi_test)
+    teststat_func = get_qmu(model.LL, model.inits)
+    qmuA_v, (mubhathat_A, muhatbhat_A) = teststat_func(
+
+end
+
 """
     get_condLL(LL, μ)
 
@@ -54,17 +73,15 @@ See equation 10 in: https://arxiv.org/pdf/1007.1727.pdf for refercen.
 """
 function get_lnLRtilde(LL, inits; POI_idx=1)
     fit = opt_maximize(LL, inits)
-    θ0 = Optim.maximizer(fit)
-    if θ0[1] < 0 # re-fit with μ set to 0
-        μ = 0.0
-        refit = opt_maximize(get_condLL(μ), inits[2:end])
-        θ0 = vcat(μ, Optim.maximizer(refit))
+    θ_hat = Optim.maximizer(fit)
+    if θ_hat[1] < 0 # re-fit with μ set to 0
+        fit = opt_maximize(get_condLL(0.0), inits[2:end])
     end
     LL_doublehat = maximum(fit)
     nuisance_inits = inits[2:end]
 
     function lnLRtilde(μ)
-        cond_LL= get_condLL(LL, μ)
+        cond_LL = get_condLL(LL, μ)
         cond_fit = opt_maximize(cond_LL, nuisance_inits)
         LL_hat = maximum(cond_fit)
         return LL_hat - LL_doublehat
@@ -138,14 +155,15 @@ end
 """
     asimovdata(model::PyHFModel, μ)
 
-Generate the Asimov dataset, which is the expected counts after fixing POI to `μ` and optimize the
+Generate the Asimov dataset and asimov parameters, which is the expected counts after fixing POI to `μ` and optimize the
 nuisance parameters.
 """
 function asimovdata(model, μ)
     condLL = get_condLL(model.LogLikelihood, μ)
     nuiscance_inits = model.inits[2:end]
     cond_res = opt_maximize(cond_LL, nuisance_inits)
-    model.expected(vcat(μ, Optim.maximizer(cond_res)))
+    asimov_params = vcat(μ, Optim.maximizer(cond_res)) 
+    model.expected(asimov_params), asimov_params
 end
 
 """
@@ -162,3 +180,11 @@ function qmuA(model, μ, test_func)
     Adata = asimovdata(model, μ)
     test_func(model, μ, Adata)
 end
+
+abstract type AbstractTestDistributions end
+struct AsymptoticDist<: AbstractTestDistributions
+    shift::Float64
+    cutoff::Float64
+end
+pvalue(d::AsymptoticDist, value) = cdf(Normal(), -(value - d.shift))
+exp_significance(d::AsymptoticDist, nsigma) = max(d.cutoff, d.shift + nsigma)
