@@ -101,6 +101,35 @@ function get_tmutilde(LL, inits)
     end
 end
 
+@doc raw"""
+Test statistic for discovery of a positive signal
+q_0 = \tilde{t}_0
+See equation 12 in: https://arxiv.org/pdf/1007.1727.pdf for reference.
+Note that this IS NOT a special case of q_\mu for \mu = 0.
+"""
+function get_q0(LL, inits)
+    tmutilde = get_tmutilde(LL, inits)
+    tmutilde(0)
+end
+
+@doc raw"""
+Test statistic for upper limits
+See equation 14 in: https://arxiv.org/pdf/1007.1727.pdf for reference.
+Note that q_0 IS NOT a special case of q_\mu for \mu = 0.
+"""
+function get_qmu(LL, inits)
+    fit = opt_maximize(LL, inits)
+    θ0 = Optim.maximizer(fit)
+    function qmu(μ)
+        if θ0[1] <= μ
+            lnLR = get_lnLR(LL, inits)
+            -2*lnLR(μ)
+        else
+            0
+        end
+    end
+end
+
 """
     asimovdata(model::PyHFModel, μ)
 
