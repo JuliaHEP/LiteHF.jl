@@ -109,7 +109,11 @@ Note that this IS NOT a special case of q_\mu for \mu = 0.
 """
 function get_q0(LL, inits)
     tmutilde = get_tmutilde(LL, inits)
-    tmutilde(0)
+    res = tmutilde(0)
+    function q0(μ)
+        @assert iszero(μ) #q0 is forced to have μ == 0
+        return res
+    end
 end
 
 @doc raw"""
