@@ -120,8 +120,9 @@ Note that q_0 IS NOT a special case of q_\mu for \mu = 0.
 function get_qmu(LL, inits)
     fit = opt_maximize(LL, inits)
     θ0 = Optim.maximizer(fit)
+    μ_hat = θ0[1]
     function qmu(μ)
-        if θ0[1] <= μ
+        if μ_hat <= μ
             lnLR = get_lnLR(LL, inits)
             -2*lnLR(μ)
         else
