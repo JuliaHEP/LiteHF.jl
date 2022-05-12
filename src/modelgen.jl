@@ -1,19 +1,21 @@
 """
-    struct PyHFModel{E, L}
+    struct PyHFModel{E, O, L}
         expected::E
+        observed::O
         priors
         prior_names
-        prior_inits::Vector{Float64}
+        inits::Vector{Float64}
         LogLikelihood::L
     end
 
 Struct for holding result from [build_pyhf](@ref).
 """
-struct PyHFModel{E, L}
+mutable struct PyHFModel{E, O, L}
     expected::E
+    observed::O
     priors
     prior_names
-    prior_inits::Vector{Float64}
+    inits::Vector{Float64}
     LogLikelihood::L
 end
 
@@ -85,7 +87,7 @@ function build_pyhf(pyhfmodel)
     end
 
     LL = pyhf_logjointof(total_expected, v_obs, priors)
-    return PyHFModel(total_expected, priors, priornames, inits, LL)
+    return PyHFModel(total_expected, v_obs, priors, priornames, inits, LL)
 end
 
 function build_pyhfchannel(channel, global_unique)

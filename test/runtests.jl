@@ -66,7 +66,7 @@ end
 
 testmodel(path::String, OPT = BFGS()) = testmodel(loadmodel(path), OPT)
 function testmodel(pyhfmodel, OPT = BFGS())
-    res = maximize(pyhfmodel.LogLikelihood, pyhfmodel.prior_inits,
+    res = maximize(pyhfmodel.LogLikelihood, pyhfmodel.inits,
                    OPT, Optim.Options(g_tol=1e-5); autodiff=:forward)
     best_paras = Optim.maximizer(res)
     twice_nll = -2*pyhfmodel.LogLikelihood(best_paras)
@@ -76,7 +76,7 @@ stateerror_shape = loadmodel(joinpath(@__DIR__, "./pyhfjson/sample_staterror_sha
 @testset "Basic expected tests" begin
     R = stateerror_shape
     @test R.expected(ones(5))[1] == [23.0, 15.0]
-    @test R.expected(R.prior_inits)[1] == [23.0, 15.0]
+    @test R.expected(R.inits)[1] == [23.0, 15.0]
     @test R.expected([0.81356312, 0.99389009, 1.01090199, 0.99097032, 1.00290362])[1] ≈
     [22.210797046385544, 14.789399036653428]
 end

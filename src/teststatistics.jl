@@ -100,3 +100,31 @@ function get_tmutilde(LL, inits)
         -2*lnLRtilde(μ)
     end
 end
+
+"""
+    asimovdata(model::PyHFModel, μ)
+
+Generate the Asimov dataset, which is the expected counts after fixing POI to `μ` and optimize the
+nuisance parameters.
+"""
+function asimovdata(model, μ)
+    condLL = get_condLL(model.LogLikelihood, μ)
+    nuiscance_inits = model.inits[2:end]
+    cond_res = opt_maximize(cond_LL, nuisance_inits)
+    model.expected(vcat(μ, Optim.maximizer(cond_res)))
+end
+
+"""
+Compute the `q_μ`.
+"""
+function qmu(model, μ, test_func)
+    test_func(model, μ, )
+end
+
+"""
+Compute the `q_μ,Asimov`.
+"""
+function qmuA(model, μ, test_func)
+    Adata = asimovdata(model, μ)
+    test_func(model, μ, Adata)
+end

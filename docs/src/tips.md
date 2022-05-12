@@ -9,7 +9,7 @@ R = f("./blah.json")
 
 maximize(
         R.LogLikelihood, 
-        R.prior_inits, 
+        R.inits, 
         BFGS(), 
         Optim.Options(f_tol=1e-5, time_limit=10); 
         autodiff=:forward

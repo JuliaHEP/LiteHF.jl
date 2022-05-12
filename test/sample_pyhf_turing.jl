@@ -12,7 +12,7 @@ const priors_array = collect(values(pyhfmodel.priors))
 end
 
 observed_data = [34,22,13,11];
-@show optimize(mymodel(observed_data), MAP(), pyhfmodel.prior_inits)
+@show optimize(mymodel(observed_data), MAP(), pyhfmodel.inits)
 #ModeResult with maximized lp of -13.51
 # 2-element Named Vector{Float64}
 # A               │ 
