@@ -52,6 +52,21 @@ function find_obs_data(name, observations)
 end
 
 """
+
+Ensure POI parameter always comes first in the input array.
+"""
+function sortpoi!(priornames, priors, poi_name)
+    poi_idx = findfirst(==(poi_name), priornames)
+    if poi_idx != 1
+        deleteat!(priornames, poi_idx)
+        pushfirst!(priornames, poi_name)
+        poi_mod = priors[poi_idx]
+        deleteat!(priors, poi_idx)
+        pushfirst!(priors, poi_mod)
+    end
+    nothing
+end
+"""
     build_pyhf(load_pyhfjson(path)) -> PyHFModel
 
 the `expected(αs)` is a function that takes vector or tuple of length `N`, where `N` is also the
@@ -65,6 +80,7 @@ are aligned.
 function build_pyhf(pyhfmodel)
     channels = [name => channel for (name, channel) in pyhfmodel if name != "misc"]
     v_obs = Tuple(find_obs_data(name, pyhfmodel["misc"][:observations]) for (name, _) in channels)
+    poi_name = pyhfmodel["misc"][:measurements][1][:config][:poi] |> Symbol
     global_unique = reduce(vcat, [sample[2].modifier_names for (name, C) in channels for sample in C]) |>
     unique
 
@@ -78,8 +94,13 @@ function build_pyhf(pyhfmodel)
     end
 
     input_modifiers = [all_lookup[k] for k in global_unique]
-    priornames = Tuple(Symbol.(global_unique))
-    priors = NamedTuple{priornames}(_prior.(input_modifiers))
+    priornames_v = Symbol.(global_unique)
+    priors_v = _prior.(input_modifiers)
+
+    sortpoi!(priornames_v, priors_v, poi_name)
+
+    priornames = Tuple(priornames_v)
+    priors = NamedTuple{priornames}(priors_v)
     inits = Vector{Float64}(_init.(input_modifiers))
 
     total_expected = let Es = Tuple(all_expected)
