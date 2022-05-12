@@ -15,8 +15,9 @@ using LiteHF, Optim
 dict = load_pyhfjson("./test/sample.json");
 
 pyhfmodel = build_pyhf(dict);
+LL = pyhf_logjointof(pyhfmodel)
 
-@show Optim.maximizer(maximize(pyhfmodel.LogLikelihood, pyhfmodel.inits))
+@show Optim.maximizer(maximize(LL, pyhfmodel.inits))
 # 2-element Vector{Float64}:
 #   1.3064374172547253
 #  -0.060413406717672286
@@ -58,7 +59,9 @@ pydict = load_pyhfjson("./test/sample.json");
 
 pyhfmodel = build_pyhf(pydict);
 
-mylikelihood(αs) = BAT.LogDVal(pyhfmodel.LogLikelihood(αs))
+LL = pyhf_logjointof(pyhfmodel)
+
+mylikelihood(αs) = BAT.LogDVal(LL(αs))
 posterior = PosteriorDensity(mylikelihood, pyhfmodel.priors)
 
 @show bat_findmode(posterior).result

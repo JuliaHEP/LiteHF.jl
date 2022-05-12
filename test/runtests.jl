@@ -66,10 +66,11 @@ end
 
 testmodel(path::String, OPT = BFGS()) = testmodel(loadmodel(path), OPT)
 function testmodel(pyhfmodel, OPT = BFGS())
-    res = maximize(pyhfmodel.LogLikelihood, pyhfmodel.inits,
+    LL = pyhf_logjointof(pyhfmodel)
+    res = maximize(LL, pyhfmodel.inits,
                    OPT, Optim.Options(g_tol=1e-5); autodiff=:forward)
     best_paras = Optim.maximizer(res)
-    twice_nll = -2*pyhfmodel.LogLikelihood(best_paras)
+    twice_nll = -2*LL(best_paras)
 end
 
 stateerror_shape = loadmodel(joinpath(@__DIR__, "./pyhfjson/sample_staterror_shapesys.json"))

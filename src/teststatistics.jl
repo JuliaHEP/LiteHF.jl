@@ -16,8 +16,8 @@ teststatistics(T::ATS) = error("Not implemented $T.")
 
 function teststatistics(model, poi_test, ::TS_qmu)
     A_data, A_mubhathat = asimov_data(model, poi_test)
-    teststat_func = get_qmu(model.LL, model.inits)
-    qmuA_v, (mubhathat_A, muhatbhat_A) = teststat_func(
+    qmu_f = get_qmu(model.LL, model.inits)
+    qmuA_v, (mubhathat_A, muhatbhat_A) = qmu_f()
 
 end
 

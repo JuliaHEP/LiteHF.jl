@@ -5,7 +5,8 @@ pydict = load_pyhfjson("./test/sample.json");
 pyhfmodel = build_pyhf(pydict);
 
 # the 2-argument version does NOT include prior ("constraint") terms in likelihood
-mylikelihood(αs) = BAT.LogDVal(pyhfmodel.LogLikelihood(αs))
+LL = pyhf_logjointpf(pyhfmodel)
+mylikelihood(αs) = BAT.LogDVal(LL(αs))
 posterior = PosteriorDensity(mylikelihood, pyhfmodel.priors)
 
 @show bat_findmode(posterior).result
