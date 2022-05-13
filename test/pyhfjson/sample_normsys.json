@@ -1,0 +1,37 @@
+{
+    "channels": [
+        {
+            "name": "mychannel",
+            "samples": [
+                {
+                    "name": "signal_MC",
+                    "data": [2,3,4,5],
+                    "modifiers": [
+                        {"name": "mu", "type": "normfactor", "data": null}
+                    ]
+                },
+                {
+                    "name": "bkg_MC",
+                    "data": [30,19,9,4],
+                    "modifiers": [
+                        {   "name": "theta", 
+                            "type": "normsys", 
+                            "data": {
+                                "hi": 1.3, 
+                                "lo": 0.8
+                            }
+                        }
+
+                    ]
+                }
+            ]
+        }
+    ],
+    "observations": [
+        { "name": "mychannel", "data": [34,22,13,11] }
+    ],
+    "measurements": [
+        { "name": "Measurement", "config": {"poi": "mu", "parameters": []} }
+    ],
+    "version": "1.0.0"
+}

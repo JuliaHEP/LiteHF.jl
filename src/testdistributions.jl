@@ -25,7 +25,7 @@ function TS_q0(model)
     LL0 = pyhf_logjointof(model)
     q0_f = get_q0(LL0, model.inits)
 
-    A_data, A_mubhathat = asimovdata(model, 1.0)
+    A_data, _ = asimovdata(model, 1.0)
     A_LL = pyhf_logjointof(model.expected, A_data, model.priors)
     q0A_f = get_q0(A_LL, model.inits)
 

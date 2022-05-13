@@ -1,20 +1,21 @@
 abstract type AbstractInterp end
 
+const V64 = Vector{Float64}
 """
     InterpCode0{T}
 
 Callable struct for interpolation for additive modifier.
 Code0 is the two-piece linear interpolation.
 """
-struct InterpCode0{T} <: AbstractInterp
-    Δ_up::T
-    Δ_down::T
+struct InterpCode0 <: AbstractInterp
+    Δ_up::V64
+    Δ_down::V64
 end
 
 function InterpCode0(I0, I_up::T, I_down::T) where {T<:AbstractVector}
     Δ_up = I_up - I0
     Δ_down = I0 - I_down
-    InterpCode0(Δ_up, Δ_down)
+    InterpCode0(Float64.(Δ_up), Float64.(Δ_down))
 end
 
 function (i::InterpCode0)(α)
@@ -43,15 +44,15 @@ function (i::InterpCode1)(α)
     Base.ifelse(α >= zero(α), (i.f_up)^α, (i.f_down)^(-α))
 end
 
-struct InterpCode2{T} <: AbstractInterp
-    a::T
-    b::T
+struct InterpCode2 <: AbstractInterp
+    a::V64
+    b::V64
 end
 
 function InterpCode2(I0, I_up::T, I_down::T) where {T<:AbstractVector}
     a = @. 0.5 * (I_up + I_down) - I0
     b = @. 0.5 * (I_up - I_down)
-    InterpCode2(a, b)
+    InterpCode2(Float64.(a), Float64.(b))
 end
 
 function (i::InterpCode2)(α)
@@ -72,16 +73,16 @@ end
 Callable struct for interpolation for additive modifier.
 Code4 is the exponential + 6-order polynomial interpolation.
 """
-struct InterpCode4{T<:AbstractVector, N<:Number} <: AbstractInterp
-    f_ups::T
-    f_downs::T
-    α0::N
+struct InterpCode4 <: AbstractInterp
+    f_ups::V64
+    f_downs::V64
+    α0::Float64
     inver::Matrix{Float64}
 end
 
-function InterpCode4(I0, I_up, I_down; α0=1)
+function InterpCode4(I0, I_up, I_down; α0=1.0)
     inver = _interp4_inverse(α0)
-    InterpCode4(I_up ./ I0, I_down ./ I0, α0, inver)
+    InterpCode4(Float64.(I_up ./ I0), Float64.(I_down ./ I0), α0, inver)
 end
 
 function (i::InterpCode4)(α)
@@ -126,7 +127,7 @@ end
 Internal type used to avoid allocation for per-bin multiplicative systematics. It behaves as a vector with length `nbins` and 
 only has value `α` on `nthbin`-th index, the rest being `one(T)`. See also [binidentity](@ref).
 """
-struct MultOneHot{T}<:AbstractVector{T}
+struct MultOneHot{T} <: AbstractVector{T}
     nbins::Int
     nthbin::Int
     α::T
@@ -151,9 +152,9 @@ end
     Pseudo flat prior in the sense that `logpdf()` always evaluates to zero,
     but `rand()`, `minimum()`, and `maximum()` behaves like `Uniform(a, b)`.
 """
-struct FlatPrior{T} <: Distributions.ContinuousUnivariateDistribution
-    a::T
-    b::T
+struct FlatPrior <: Distributions.ContinuousUnivariateDistribution
+    a::Float64
+    b::Float64
 end
 
 Base.minimum(d::FlatPrior) = d.a

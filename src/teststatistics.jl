@@ -39,7 +39,7 @@ A functional that returns a function `lnLR(μ::Number)` that evaluates to log of
 """
 function get_lnLR(LL, inits; POI_idx=1)
     fit = opt_maximize(LL, inits)
-    θ0 = Optim.maximizer(fit)
+    θ0_hat = Optim.maximizer(fit)
     LL_hat = maximum(fit)
     nuisance_inits = inits[2:end]
 
@@ -64,11 +64,11 @@ See equation 10 in: https://arxiv.org/pdf/1007.1727.pdf for refercen.
 function get_lnLRtilde(LL, inits)
     fit = opt_maximize(LL, inits)
     θ_hat = Optim.maximizer(fit)
+    nuisance_inits = inits[2:end]
     if θ_hat[1] < 0 # re-fit with μ set to 0
-        fit = opt_maximize(get_condLL(0.0), inits[2:end])
+        fit = cond_maximize(LL, 0.0, nuisance_inits)
     end
     LL_hat = maximum(fit)
-    nuisance_inits = inits[2:end]
 
     function lnLRtilde(μ)
         cond_fit = cond_maximize(LL, μ, nuisance_inits)
