@@ -151,7 +151,8 @@ function pyhf_loglikelihoodof(expected, obs)
             E = expe[i]
             O = obs[i]
             @inbounds for j in eachindex(E) # loop over bins
-                mes_LL += f(E[j], O[j])
+                mes_LL += _relaxedpoislogpdf(E[j], O[j])
+                # mes_LL += f(E[j], O[j])
             end
         end
 
@@ -178,7 +179,10 @@ for the priors.
 """
 function pyhf_logpriorof(priors)
     pris = values(priors)
-    αs -> internal_constrainteval(pris, αs)
+    function (αs)
+        @assert length(αs) == length(pris)
+        internal_constrainteval(pris, αs)
+    end
 end
 
 

@@ -86,5 +86,5 @@ end
     @test testmodel(joinpath(@__DIR__, "./pyhfjson/single_channel_big.json")) ≈ 80.67893633848638 rtol=0.0001
     @test testmodel(joinpath(@__DIR__, "./pyhfjson/multi_channel.json")) ≈ 39.02800819146104 rtol=0.0001
     # _logabsgamma doesn't have DiffRule right now
-    @test testmodel(stateerror_shape, NelderMead()) ≈ 16.66838236805484 rtol = 0.0001
+    @test testmodel(stateerror_shape) ≈ 16.66838236805484 rtol = 0.0001
 end

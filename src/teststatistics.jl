@@ -1,25 +1,16 @@
 function opt_maximize(f, inits; alg = Optim.NelderMead())
-    Optim.maximize(f, inits, alg, Optim.Options(g_tol = 1e-5, iterations=10^4); autodiff=:forward)
+    res = Optim.maximize(f, inits, alg, Optim.Options(g_tol = 2e-8, iterations=10^4); autodiff=:forward)
+    @assert Optim.converged(res)
+    res
 end
+opt_maximize(m::PyHFModel) = opt_maximize(pyhf_logjointof(m), m.inits)
 
-abstract type AbstractTestStatistics <: Distributions.ContinuousUnivariateDistribution end
-const ATS = AbstractTestStatistics
-
-struct TS_t0 <: ATS end
-struct TS_tmu <: ATS end
-struct TS_tmutilde <: ATS end
-struct TS_q0 <: ATS end
-struct TS_qmu <: ATS end
-struct TS_qmutilde <: ATS end
-
-teststatistics(T::ATS) = error("Not implemented $T.")
-
-function teststatistics(model, poi_test, ::TS_qmu)
-    A_data, A_mubhathat = asimov_data(model, poi_test)
-    qmu_f = get_qmu(model.LL, model.inits)
-    qmuA_v, (mubhathat_A, muhatbhat_A) = qmu_f()
-
+function cond_maximize(LL, μ, partial_inits)
+    cond_LL= get_condLL(LL, μ)
+    opt_maximize(cond_LL, partial_inits)
 end
+cond_maximize(m::PyHFModel, μ) = cond_maximize(pyhf_logjointof(m), μ, m.inits[2:end])
+
 
 """
     get_condLL(LL, μ)
@@ -49,14 +40,13 @@ A functional that returns a function `lnLR(μ::Number)` that evaluates to log of
 function get_lnLR(LL, inits; POI_idx=1)
     fit = opt_maximize(LL, inits)
     θ0 = Optim.maximizer(fit)
-    LL_doublehat = maximum(fit)
+    LL_hat = maximum(fit)
     nuisance_inits = inits[2:end]
 
     function lnLR(μ)
-        cond_LL= get_condLL(LL, μ)
-        cond_fit = opt_maximize(cond_LL, nuisance_inits)
-        LL_hat = maximum(cond_fit)
-        return LL_hat - LL_doublehat
+        cond_fit = cond_maximize(LL, μ, nuisance_inits)
+        LL_doublehat = maximum(cond_fit)
+        return LL_doublehat - LL_hat
     end
 end
 
@@ -71,20 +61,19 @@ A functional that returns a function `lnLRtilde(μ::Number)` that evaluates to l
 
 See equation 10 in: https://arxiv.org/pdf/1007.1727.pdf for refercen.
 """
-function get_lnLRtilde(LL, inits; POI_idx=1)
+function get_lnLRtilde(LL, inits)
     fit = opt_maximize(LL, inits)
     θ_hat = Optim.maximizer(fit)
     if θ_hat[1] < 0 # re-fit with μ set to 0
         fit = opt_maximize(get_condLL(0.0), inits[2:end])
     end
-    LL_doublehat = maximum(fit)
+    LL_hat = maximum(fit)
     nuisance_inits = inits[2:end]
 
     function lnLRtilde(μ)
-        cond_LL = get_condLL(LL, μ)
-        cond_fit = opt_maximize(cond_LL, nuisance_inits)
-        LL_hat = maximum(cond_fit)
-        return LL_hat - LL_doublehat
+        cond_fit = cond_maximize(LL, μ, nuisance_inits)
+        LL_doublehat = maximum(cond_fit)
+        return LL_doublehat - LL_hat
     end
 end
 
@@ -99,7 +88,7 @@ Return a callable function `t(μ)` that is the test statistics:
 function get_tmu(LL, inits)
     lnLR = get_lnLR(LL, inits)
     function t(μ)
-        -2*lnLR(μ)
+        max(0.0, -2*lnLR(μ))
     end
 end
 
@@ -113,8 +102,8 @@ Return a callable function `ttilde(μ)` that is:
 """
 function get_tmutilde(LL, inits)
     lnLRtilde = get_lnLRtilde(LL, inits)
-    function ttilde(μ)
-        -2*lnLRtilde(μ)
+    function tmutilde(μ)
+        max(0.0, -2*lnLRtilde(μ))
     end
 end
 
@@ -125,10 +114,9 @@ See equation 12 in: https://arxiv.org/pdf/1007.1727.pdf for reference.
 Note that this IS NOT a special case of q_\mu for \mu = 0.
 """
 function get_q0(LL, inits)
-    tmutilde = get_tmutilde(LL, inits)
-    res = tmutilde(0)
+    res = get_tmutilde(LL, inits)(0.0)
     function q0(μ)
-        @assert iszero(μ) #q0 is forced to have μ == 0
+        @assert iszero(μ) "q0 by definition demands μ=0" #q0 is forced to have μ == 0
         return res
     end
 end
@@ -147,11 +135,24 @@ function get_qmu(LL, inits)
             lnLR = get_lnLR(LL, inits)
             -2*lnLR(μ)
         else
-            0
+            0.0
         end
     end
 end
 
+function get_qmutilde(LL, inits)
+    fit = opt_maximize(LL, inits)
+    θ0 = Optim.maximizer(fit)
+    lnLRtilde = get_lnLRtilde(LL, inits)
+    μ_hat = θ0[1]
+    function qmutilde(μ)
+        if μ_hat <= μ
+            -2*lnLRtilde(μ)
+        else
+            0.0
+        end
+    end
+end
 """
     asimovdata(model::PyHFModel, μ)
 
@@ -159,9 +160,9 @@ Generate the Asimov dataset and asimov parameters, which is the expected counts 
 nuisance parameters.
 """
 function asimovdata(model, μ)
-    condLL = get_condLL(model.LogLikelihood, μ)
-    nuiscance_inits = model.inits[2:end]
-    cond_res = opt_maximize(cond_LL, nuisance_inits)
+    LL = pyhf_logjointof(model)
+    nuisance_inits = model.inits[2:end]
+    cond_res = cond_maximize(LL, μ, nuisance_inits)
     asimov_params = vcat(μ, Optim.maximizer(cond_res)) 
     model.expected(asimov_params), asimov_params
 end
