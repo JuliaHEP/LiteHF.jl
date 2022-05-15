@@ -141,24 +141,11 @@ Return a callable Function `L(αs)` that would calculate the log likelihood. `ex
     The so called "constraint" terms (from priors) are NOT included here.
 """
 function pyhf_loglikelihoodof(expected, obs)
-    f(x, o) = logpdf(Poisson(x), o)
-    L = function (αs)
-        T = eltype(αs)
-        expe = expected(αs)
-        any(E->any(!isfinite, E), expe) && return T(-Inf)
-        mes_LL = zero(T)
-        @inbounds for i in eachindex(expe) # loop over channels
-            E = expe[i]
-            O = obs[i]
-            @inbounds for j in eachindex(E) # loop over bins
-                mes_LL += _relaxedpoislogpdf(E[j], O[j])
-                # mes_LL += f(E[j], O[j])
-            end
+    return function log_likelihood(αs)
+        mapreduce(+, expected(αs), obs) do E, O # sum over channels
+            sum(Base.Broadcast.broadcasted((e,o) -> logpdf(Poisson(e), o), E, O))
         end
-
-        return mes_LL
     end
-    return L
 end
 
 @generated function internal_constrainteval(pris, αs)
