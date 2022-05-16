@@ -82,7 +82,9 @@ struct RelaxedPoisson{T} <: Distributions.ContinuousUnivariateDistribution
     λ::T
 end
 # https://github.com/scikit-hep/pyhf/blob/ce7057417ee8c4e845df8302c7375301901d2b7d/src/pyhf/tensor/numpy_backend.py#L390
-_relaxedpoislogpdf(λ, x) = xlogy(x, λ) - λ - logabsgamma(x + 1.0)[1]
+@inline function _relaxedpoislogpdf(λ::T, x)::T where T
+    xlogy(x, λ) - λ - logabsgamma(x + one(x))[1]
+end
 Distributions.logpdf(d::RelaxedPoisson, x) = _relaxedpoislogpdf(d.λ*x, d.λ)
 _prior(S::Shapesys) = RelaxedPoisson(S.σn2)
 _init(S::Shapesys) = 1.0

@@ -82,6 +82,11 @@ stateerror_shape = loadmodel(joinpath(@__DIR__, "./pyhfjson/sample_staterror_sha
     [22.210797046385544, 14.789399036653428]
 end
 
+@testset "loglikelihood" begin
+    test_f = pyhf_loglikelihoodof(x->([-x[1], -x[2]]), [1,2])
+    @test test_f(ones(2)) == -Inf
+end
+
 @testset "Conditional maximizer" begin
     RR = loadmodel(joinpath(@__DIR__, "./pyhfjson/sample_normsys.json"))
     likelihood, _ = cond_maximize(pyhf_logjointof(RR), 1.0, RR.inits[2:end])
@@ -93,6 +98,5 @@ end
 @testset "Full model" begin
     @test testmodel(joinpath(@__DIR__, "./pyhfjson/single_channel_big.json")) ≈ 80.67893633848638 rtol=0.0001
     @test testmodel(joinpath(@__DIR__, "./pyhfjson/multi_channel.json")) ≈ 39.02800819146104 rtol=0.0001
-    # _logabsgamma doesn't have DiffRule right now
     @test testmodel(stateerror_shape) ≈ 16.66838236805484 rtol = 0.0001
 end
