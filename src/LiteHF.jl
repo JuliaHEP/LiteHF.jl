@@ -20,8 +20,8 @@ export pyhf_loglikelihoodof, pyhf_logpriorof, pyhf_logjointof
 # modifiers
 export Normsys, Histosys, Normfactor, Lumi, Staterror, nmodifiers
 
-# pyhf json parsing
-export load_pyhfjson, build_pyhf
+# pyhf
+export load_pyhfjson, build_pyhf, free_maximize, cond_maximize
 
 # Test Statistics Distributions
 export TS_q0, TS_qmu, TS_qtilde

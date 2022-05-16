@@ -11,6 +11,7 @@ function cond_maximize(LL, μ, partial_inits; kwd...)
 end
 cond_maximize(m::PyHFModel, μ) = cond_maximize(pyhf_logjointof(m), μ, m.inits[2:end])
 
+const fix_poi_fit = cond_maximize
 
 """
     get_condLL(LL, μ)
