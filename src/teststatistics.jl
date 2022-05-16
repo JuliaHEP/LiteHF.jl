@@ -1,13 +1,13 @@
-function opt_maximize(f, inits; alg = Optim.NelderMead())
-    res = Optim.maximize(f, inits, alg, Optim.Options(g_tol = 2e-8, iterations=10^4); autodiff=:forward)
+function free_maximize(f, inits; alg = Optim.LBFGS())
+    res = Optim.maximize(f, inits, alg, Optim.Options(g_tol = 1e-9, iterations=10^4); autodiff=:forward)
     @assert Optim.converged(res)
-    res
+    maximum(res), Optim.maximizer(res)
 end
-opt_maximize(m::PyHFModel) = opt_maximize(pyhf_logjointof(m), m.inits)
+free_maximize(m::PyHFModel; kwd...) = free_maximize(pyhf_logjointof(m), m.inits; kwd...)
 
-function cond_maximize(LL, μ, partial_inits)
+function cond_maximize(LL, μ, partial_inits; kwd...)
     cond_LL= get_condLL(LL, μ)
-    opt_maximize(cond_LL, partial_inits)
+    free_maximize(cond_LL, partial_inits; kwd...)
 end
 cond_maximize(m::PyHFModel, μ) = cond_maximize(pyhf_logjointof(m), μ, m.inits[2:end])
 
@@ -38,14 +38,11 @@ A functional that returns a function `lnLR(μ::Number)` that evaluates to log of
     we assume the POI is the first in the input array.
 """
 function get_lnLR(LL, inits; POI_idx=1)
-    fit = opt_maximize(LL, inits)
-    θ0_hat = Optim.maximizer(fit)
-    LL_hat = maximum(fit)
+    LL_hat, θ0_hat = free_maximize(LL, inits)
     nuisance_inits = inits[2:end]
 
     function lnLR(μ)
-        cond_fit = cond_maximize(LL, μ, nuisance_inits)
-        LL_doublehat = maximum(cond_fit)
+        LL_doublehat, _ = cond_maximize(LL, μ, nuisance_inits)
         return LL_doublehat - LL_hat
     end
 end
@@ -62,17 +59,14 @@ A functional that returns a function `lnLRtilde(μ::Number)` that evaluates to l
 See equation 10 in: https://arxiv.org/pdf/1007.1727.pdf for refercen.
 """
 function get_lnLRtilde(LL, inits)
-    fit = opt_maximize(LL, inits)
-    θ_hat = Optim.maximizer(fit)
+    LL_hat, θ_hat = free_maximize(LL, inits)
     nuisance_inits = inits[2:end]
     if θ_hat[1] < 0 # re-fit with μ set to 0
-        fit = cond_maximize(LL, 0.0, nuisance_inits)
+        LL_hat, _ = cond_maximize(LL, 0.0, nuisance_inits)
     end
-    LL_hat = maximum(fit)
 
     function lnLRtilde(μ)
-        cond_fit = cond_maximize(LL, μ, nuisance_inits)
-        LL_doublehat = maximum(cond_fit)
+        LL_doublehat, _ = cond_maximize(LL, μ, nuisance_inits)
         return LL_doublehat - LL_hat
     end
 end
@@ -115,9 +109,9 @@ Note that this IS NOT a special case of q_\mu for \mu = 0.
 """
 function get_q0(LL, inits)
     res = get_tmutilde(LL, inits)(0.0)
-    function q0(μ)
+    function q0(μ=0)
         @assert iszero(μ) "q0 by definition demands μ=0" #q0 is forced to have μ == 0
-        return res
+        return max(res, 0.0)
     end
 end
 
@@ -127,8 +121,7 @@ See equation 14 in: https://arxiv.org/pdf/1007.1727.pdf for reference.
 Note that q_0 IS NOT a special case of q_\mu for \mu = 0.
 """
 function get_qmu(LL, inits)
-    fit = opt_maximize(LL, inits)
-    θ0 = Optim.maximizer(fit)
+    _, θ0 = free_maximize(LL, inits)
     μ_hat = θ0[1]
     function qmu(μ)
         if μ_hat <= μ
@@ -141,8 +134,7 @@ function get_qmu(LL, inits)
 end
 
 function get_qmutilde(LL, inits)
-    fit = opt_maximize(LL, inits)
-    θ0 = Optim.maximizer(fit)
+    _, θ0 = free_maximize(LL, inits)
     lnLRtilde = get_lnLRtilde(LL, inits)
     μ_hat = θ0[1]
     function qmutilde(μ)
@@ -162,24 +154,9 @@ nuisance parameters.
 function asimovdata(model, μ)
     LL = pyhf_logjointof(model)
     nuisance_inits = model.inits[2:end]
-    cond_res = cond_maximize(LL, μ, nuisance_inits)
-    asimov_params = vcat(μ, Optim.maximizer(cond_res)) 
+    _, θs = cond_maximize(LL, μ, nuisance_inits)
+    asimov_params = vcat(μ, θs)
     model.expected(asimov_params), asimov_params
-end
-
-"""
-Compute the `q_μ`.
-"""
-function qmu(model, μ, test_func)
-    test_func(model, μ, )
-end
-
-"""
-Compute the `q_μ,Asimov`.
-"""
-function qmuA(model, μ, test_func)
-    Adata = asimovdata(model, μ)
-    test_func(model, μ, Adata)
 end
 
 abstract type AbstractTestDistributions end

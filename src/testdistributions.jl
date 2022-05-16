@@ -28,6 +28,7 @@ function TS_q0(model)
     A_data, _ = asimovdata(model, 1.0)
     A_LL = pyhf_logjointof(model.expected, A_data, model.priors)
     q0A_f = get_q0(A_LL, model.inits)
+    @show q0_f(0.0), q0A_f(0.0)
 
     function (μ=0)
         return sqrt(q0_f(μ)) - sqrt(q0A_f(μ))
