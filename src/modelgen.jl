@@ -141,9 +141,10 @@ Return a callable Function `L(αs)` that would calculate the log likelihood. `ex
     The so called "constraint" terms (from priors) are NOT included here.
 """
 function pyhf_loglikelihoodof(expected, obs)
+    f(e, o) = e < zero(e) ? oftype(e, -Inf) : _relaxedpoislogpdf(e, o)
     return function log_likelihood(αs)
         mapreduce(+, expected(αs), obs) do E, O # sum over channels
-            sum(Base.Broadcast.broadcasted((e,o) -> logpdf(Poisson(e), o), E, O))
+            sum(Base.Broadcast.broadcasted(f, E, O))
         end
     end
 end
