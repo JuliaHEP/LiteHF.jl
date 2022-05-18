@@ -149,7 +149,7 @@ end
 """
     asimovdata(model::PyHFModel, μ)
 
-Generate the Asimov dataset and asimov parameters, which is the expected counts after fixing POI to `μ` and optimize the
+Generate the Asimov dataset and asimov priors, which is the expected counts after fixing POI to `μ` and optimize the
 nuisance parameters.
 """
 function asimovdata(model, μ)
@@ -157,8 +157,13 @@ function asimovdata(model, μ)
     nuisance_inits = model.inits[2:end]
     _, θs = cond_maximize(LL, μ, nuisance_inits)
     asimov_params = vcat(μ, θs)
-    model.expected(asimov_params), asimov_params
+    priors = model.priors
+    new_priors = NamedTuple{keys(priors)}(map(asimovprior, priors, asimov_params))
+    model.expected(asimov_params), new_priors
 end
+
+asimovprior(dist::Normal, θ) = Normal(θ, dist.σ)
+asimovprior(dist::FlatPrior, θ) = dist
 
 abstract type AbstractTestDistributions end
 struct AsymptoticDist<: AbstractTestDistributions
