@@ -92,8 +92,26 @@ end
     @test -2*likelihood <= 27.6021945001722
 end
 
-@testset "Full json run" begin
+@testset "Full json MLE" begin
     @test testmodel(joinpath(@__DIR__, "./pyhfjson/single_channel_big.json")) ≈ 80.67893633848638 rtol=0.0001
     @test testmodel(joinpath(@__DIR__, "./pyhfjson/multi_channel.json")) ≈ 39.02800819146104 rtol=0.0001
     @test testmodel(stateerror_shape) ≈ 16.66838236805484 rtol = 0.0001
+end
+
+@testset "qtilde CLs" begin
+    RR = loadmodel(joinpath(@__DIR__, "./pyhfjson/sample_normsys.json"))
+    A_model = AsimovModel(RR, 0.0)
+    A_LL = pyhf_logjointof(A_model)
+    q0A_f = LiteHF.get_qmutilde(A_LL, A_model.inits)
+    sqrtqmuA = sqrt(q0A_f(1.0))
+
+    SplusB, Bonly = asymptotic_dists(sqrtqmuA)
+    @test isapprox(expected_pvalue(SplusB, Bonly), [
+                                                    0.002506004033129367,
+                                                    0.01340873040275629,
+                                                    0.06307942967469633,
+                                                    0.23209511537562486,
+                                                    0.5691591400023538
+                                                   ]; rtol=0.005
+                  )
 end

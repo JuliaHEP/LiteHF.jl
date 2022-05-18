@@ -152,7 +152,7 @@ end
 Generate the Asimov dataset and asimov priors, which is the expected counts after fixing POI to `μ` and optimize the
 nuisance parameters.
 """
-function asimovdata(model, μ)
+function asimovdata(model::PyHFModel, μ)
     LL = pyhf_logjointof(model)
     nuisance_inits = model.inits[2:end]
     _, θs = cond_maximize(LL, μ, nuisance_inits)
@@ -162,13 +162,10 @@ function asimovdata(model, μ)
     model.expected(asimov_params), new_priors
 end
 
+function AsimovModel(model::PyHFModel, μ)
+    A_data, A_priors = asimovdata(model, μ)
+    PyHFModel(model.expected, A_data, A_priors, model.prior_names, model.inits)
+end
+
 asimovprior(dist::Normal, θ) = Normal(θ, dist.σ)
 asimovprior(dist::FlatPrior, θ) = dist
-
-abstract type AbstractTestDistributions end
-struct AsymptoticDist<: AbstractTestDistributions
-    shift::Float64
-    cutoff::Float64
-end
-pvalue(d::AsymptoticDist, value) = cdf(Normal(), -(value - d.shift))
-exp_significance(d::AsymptoticDist, nsigma) = max(d.cutoff, d.shift + nsigma)
