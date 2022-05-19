@@ -3,15 +3,6 @@ module LiteHF
 using Distributions
 import Random, Optim
 
-using ForwardDiff: Dual, partials
-import SpecialFunctions
-# https://github.com/JuliaDiff/ForwardDiff.jl/pull/585/
-function SpecialFunctions.logabsgamma(d::Dual{T,<:Real}) where {T}
-    x = value(d)
-    y, s = SpecialFunctions.logabsgamma(x)
-    return (Dual{T}(y, SpecialFunctions.digamma(x) * partials(d)), Dual{T}(s, zero(s)))
-end
-
 export pyhf_loglikelihoodof, pyhf_logpriorof, pyhf_logjointof
 
 # interpolations
