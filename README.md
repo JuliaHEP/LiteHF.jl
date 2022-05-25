@@ -33,7 +33,7 @@ dict = load_pyhfjson("./test/sample.json");
 
 const pyhfmodel = build_pyhf(dict);
 # unpack `NamedTuple` into just an array of prior distributions
-const priors_array = collect(values(pyhfmodel.priors))
+const priors_array = collect(values(priors(pyhfmodel)))
 
 @model function mymodel(observed)
     αs ~ arraydist(priors_array)
@@ -42,7 +42,7 @@ const priors_array = collect(values(pyhfmodel.priors))
 end
 
 observed_data = [34,22,13,11];
-@show optimize(mymodel(observed_data), MAP(), pyhfmodel.inits)
+@show optimize(mymodel(observed_data), MAP(), inits(pyhfmodel))
 #ModeResult with maximized lp of -13.51
 # 2-element Named Vector{Float64}
 # A               │ 
@@ -62,7 +62,7 @@ pyhfmodel = build_pyhf(pydict);
 LL = pyhf_logjointof(pyhfmodel)
 
 mylikelihood(αs) = BAT.LogDVal(LL(αs))
-posterior = PosteriorDensity(mylikelihood, pyhfmodel.priors)
+posterior = PosteriorDensity(mylikelihood, priors(pyhfmodel))
 
 @show bat_findmode(posterior).result
 # (mu = 1.3064647047644158, theta = -0.06049852104383994)

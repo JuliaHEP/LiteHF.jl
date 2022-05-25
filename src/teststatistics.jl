@@ -72,35 +72,26 @@ function get_lnLRtilde(LL, inits)
     end
 end
 
-@doc raw"""
-    get_tmu(LL, inits)
+abstract type AbstractTestStatistics end
+const ATS = AbstractTestStatistics
 
-Return a callable function `t(μ)` that is the test statistics:
+@doc raw"""
+    T_tmu
+
 ```math
     t_\mu = -2\ln\lambda(\mu)
 ```
 """
-function get_tmu(LL, inits)
-    lnLR = get_lnLR(LL, inits)
-    function t(μ)
-        max(0.0, -2*lnLR(μ))
-    end
-end
+struct T_tmu <: ATS end
 
 @doc raw"""
-    get_tmutilde(LL, inits)
+    T_tmutilde(LL, inits)
 
-Return a callable function `ttilde(μ)` that is:
 ```math
     \widetilde{t_\mu} = -2\ln\widetilde{\lambda(\mu)}
 ```
 """
-function get_tmutilde(LL, inits)
-    lnLRtilde = get_lnLRtilde(LL, inits)
-    function tmutilde(μ)
-        max(0.0, -2*lnLRtilde(μ))
-    end
-end
+struct T_tmutilde <: ATS end
 
 @doc raw"""
 Test statistic for discovery of a positive signal
@@ -108,20 +99,45 @@ q_0 = \tilde{t}_0
 See equation 12 in: https://arxiv.org/pdf/1007.1727.pdf for reference.
 Note that this IS NOT a special case of q_\mu for \mu = 0.
 """
-function get_q0(LL, inits)
-    res = get_tmutilde(LL, inits)(0.0)
-    function q0(μ=0)
-        @assert iszero(μ) "q0 by definition demands μ=0" #q0 is forced to have μ == 0
-        return max(res, 0.0)
-    end
-end
+struct T_q0 <: ATS end
 
 @doc raw"""
 Test statistic for upper limits
 See equation 14 in: https://arxiv.org/pdf/1007.1727.pdf for reference.
 Note that q_0 IS NOT a special case of q_\mu for \mu = 0.
 """
-function get_qmu(LL, inits)
+struct T_qmu <: ATS end
+
+struct T_qmutilde <: ATS end
+
+@doc raw"""
+    get_teststat(LL, inits, ::Type{T}) where T <: ATS
+
+Return a callable function `t(μ)` that evaluates to the value of corresponding test statistics.
+"""
+function get_teststat(LL, inits, ::Type{T_tmu})
+    lnLR = get_lnLR(LL, inits)
+    function t(μ)
+        max(0.0, -2*lnLR(μ))
+    end
+end
+
+function get_teststat(LL, inits, ::Type{T_tmutilde})
+    lnLRtilde = get_lnLRtilde(LL, inits)
+    function tmutilde(μ)
+        max(0.0, -2*lnLRtilde(μ))
+    end
+end
+
+function get_teststat(LL, inits, ::Type{T_q0})
+    res = get_teststate(LL, inits, T_tmutilde)(0.0)
+    function q0(μ=0)
+        @assert iszero(μ) "q0 by definition demands μ=0" #q0 is forced to have μ == 0
+        return max(res, 0.0)
+    end
+end
+
+function get_teststat(LL, inits, ::Type{T_qmu})
     _, θ0 = free_maximize(LL, inits)
     μ_hat = θ0[1]
     function qmu(μ)
@@ -134,7 +150,7 @@ function get_qmu(LL, inits)
     end
 end
 
-function get_qmutilde(LL, inits)
+function get_teststat(LL, inits, ::Type{T_qmutilde})
     _, θ0 = free_maximize(LL, inits)
     lnLRtilde = get_lnLRtilde(LL, inits)
     μ_hat = θ0[1]
@@ -146,6 +162,7 @@ function get_qmutilde(LL, inits)
         end
     end
 end
+
 """
     asimovdata(model::PyHFModel, μ)
 
@@ -154,18 +171,78 @@ nuisance parameters.
 """
 function asimovdata(model::PyHFModel, μ)
     LL = pyhf_logjointof(model)
-    nuisance_inits = model.inits[2:end]
+    nuisance_inits = inits(model)[2:end]
     _, θs = cond_maximize(LL, μ, nuisance_inits)
     asimov_params = vcat(μ, θs)
-    priors = model.priors
-    new_priors = NamedTuple{keys(priors)}(map(asimovprior, priors, asimov_params))
-    model.expected(asimov_params), new_priors
+    ps = priors(model)
+    new_priors = NamedTuple{keys(ps)}(map(asimovprior, ps, asimov_params))
+    expected(model, asimov_params), new_priors
 end
 
+"""
+    AsimovModel(model::PyHFModel, μ)::PyHFModel
+
+Generate the Asimov model when fixing `μ` (POI) to a value. Notice this changes the `priors` and `observed` compare
+to the original `model`.
+"""
 function AsimovModel(model::PyHFModel, μ)
     A_data, A_priors = asimovdata(model, μ)
-    PyHFModel(model.expected, A_data, A_priors, model.prior_names, model.inits)
+    PyHFModel(expected(model), A_data, A_priors, prior_names(model), inits(model))
 end
 
 asimovprior(dist::Normal, θ) = Normal(θ, dist.σ)
 asimovprior(dist::FlatPrior, θ) = dist
+
+function T_qmu(model::PyHFModel, qmuA_f)
+    LL0 = pyhf_logjointof(model)
+    qmu_f = get_teststat(LL0, inits(model), T_qmu)
+
+    μ -> sqrt(qmu_f(μ)) - sqrt(qmuA_f(μ))
+end
+
+function T_qmu(model::PyHFModel)
+    A_model = AsimovModel(model, 0.0)
+    A_LL = pyhf_logjointof(A_model)
+    qmuA_f = get_teststat(A_LL, inits(A_model), T_qmu)
+    TS_q(model, qmuA_f)
+end
+
+function T_q0(model::PyHFModel, q0A_f)
+    LL0 = pyhf_logjointof(model)
+    q0_f = get_teststat(LL0, inits(model), T_q0)
+
+    function (μ=0)
+        return sqrt(q0_f(μ)) - sqrt(q0A_f(μ))
+    end
+end
+
+function T_q0(model::PyHFModel)
+    A_model = AsimovModel(model, 1.0)
+    A_LL = pyhf_logjointof(A_model)
+    q0A_f = get_q0(A_LL, inits(A_model))
+    TS_q0(model, q0A_f)
+end
+
+function T_qmutilde(model::PyHFModel, qtildeA_f)
+    LL0 = pyhf_logjointof(model)
+    qtilde_f = get_teststat(LL0, inits(model), T_qmutilde)
+
+    function (x)
+        qmu = qtilde_f(x)
+        qmu_A = qtildeA_f(x)
+        sqrtqmu = sqrt(qmu)
+        sqrtqmuA = sqrt(qmu_A)
+        if sqrtqmu < sqrtqmuA
+            sqrtqmu - sqrtqmuA
+        else
+            (qmu - qmu_A) / (2 * sqrtqmuA)
+        end
+    end
+end
+
+function T_qmutilde(model::PyHFModel)
+    A_model = AsimovModel(model, 0.0)
+    A_LL = pyhf_logjointof(A_model)
+    qtildeA_f = get_teststat(A_LL, inits(A_model), T_qmutilde)
+    TS_qtilde(model, qtildeA_f)
+end

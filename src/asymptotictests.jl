@@ -1,6 +1,6 @@
 abstract type AbstractTestDistributions end
 
-struct AsymptoticDist<: AbstractTestDistributions
+struct AsymptoticDist <: AbstractTestDistributions
     shift::Float64
     cutoff::Float64
 end

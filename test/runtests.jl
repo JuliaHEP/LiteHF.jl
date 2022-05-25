@@ -67,7 +67,7 @@ end
 testmodel(path::String, OPT = BFGS()) = testmodel(loadmodel(path), OPT)
 function testmodel(pyhfmodel, OPT = BFGS())
     LL = pyhf_logjointof(pyhfmodel)
-    res = maximize(LL, pyhfmodel.inits,
+    res = maximize(LL, inits(pyhfmodel),
                    OPT, Optim.Options(g_tol=1e-5); autodiff=:forward)
     best_paras = Optim.maximizer(res)
     twice_nll = -2*LL(best_paras)
@@ -86,9 +86,9 @@ end
     test_f = pyhf_loglikelihoodof(x->([-x[1], -x[2]]), [1,2])
     @test test_f(ones(2)) == -Inf
     RR = loadmodel(joinpath(@__DIR__, "./pyhfjson/sample_normsys.json"))
-    likelihood, _ = cond_maximize(pyhf_logjointof(RR), 1.0, RR.inits[2:end])
+    likelihood, _ = cond_maximize(pyhf_logjointof(RR), 1.0, inits(RR)[2:end])
     @test -2*likelihood <= 21.233919574137236 # better than pyhf value
-    likelihood, _ = cond_maximize(pyhf_logjointof(RR), 0.0, RR.inits[2:end])
+    likelihood, _ = cond_maximize(pyhf_logjointof(RR), 0.0, inits(RR)[2:end])
     @test -2*likelihood <= 27.6021945001722
 end
 
@@ -102,8 +102,8 @@ end
     RR = loadmodel(joinpath(@__DIR__, "./pyhfjson/sample_normsys.json"))
     A_model = AsimovModel(RR, 0.0)
     A_LL = pyhf_logjointof(A_model)
-    q0A_f = LiteHF.get_qmutilde(A_LL, A_model.inits)
-    sqrtqmuA = sqrt(q0A_f(1.0))
+    Asimov_qtilde = LiteHF.get_teststat(A_LL, inits(A_model), T_qmutilde)
+    sqrtqmuA = sqrt(Asimov_qtilde(1.0))
 
     SplusB, Bonly = asymptotic_dists(sqrtqmuA)
     @test isapprox(expected_pvalue(SplusB, Bonly), [
