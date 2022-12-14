@@ -19,10 +19,10 @@ Distributions = "0.25"
 ForwardDiff = "^0.10.30"
 JSON3 = "1"
 LogExpFunctions = "0.3"
-Optim = "1"
+Optim = "^1.7"
 SpecialFunctions = "2"
 Unrolled = "0.1"
-julia = "1"
+julia = "^1.6"
 
 [extras]
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
