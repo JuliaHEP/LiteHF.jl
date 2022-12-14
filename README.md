@@ -2,6 +2,8 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliahep.github.io/LiteHF.jl/dev/)
 [![Build Status](https://github.com/JuliaHEP/LiteHF.jl/workflows/CI/badge.svg)](https://github.com/JuliaHEP/LiteHF.jl/actions)
 [![Codecov](https://codecov.io/gh/JuliaHEP/LiteHF.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaHEP/LiteHF.jl)
+[![DOI](https://zenodo.org/badge/482332815.svg)](https://zenodo.org/badge/latestdoi/482332815)
+
 
 
 ## TODO
