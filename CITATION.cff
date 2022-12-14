@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "Cite this paper whenever you use this package"
+authors:
+- family-names: "Ling"
+  given-names: "Jerry"
+  orcid: "https://orcid.org/0000-0002-3359-0380"
+title: "LiteHF.jl: Julia implementation of HistFactory-style Likelihood ratio methods and test statistics"
+version: "v1"
+license: "MIT"
+doi: "10.5281/zenodo.7435154"
+url: "https://github.com/JuliaHEP/LiteHF.jl/"
