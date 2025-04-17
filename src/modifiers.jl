@@ -160,6 +160,8 @@ ExpCounts(nominal::Vector{<:Number}, names::Vector{Symbol}, modifiers::AbstractV
 
 The `Unrolled.@unroll` kernel function that computs the expected counts.
 """
+function _expkernel() end
+
 @unroll function _expkernel(modifiers, nominal, αs)
     T = eltype(αs)
     additive = T.(nominal)
