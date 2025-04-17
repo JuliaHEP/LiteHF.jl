@@ -1,7 +1,7 @@
 name = "LiteHF"
 uuid = "87f02e12-f6bc-4038-9bdd-797fa8455fab"
 authors = ["Jerry Ling <proton@jling.dev> and contributors"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
